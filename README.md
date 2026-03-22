@@ -71,7 +71,7 @@
 | MySQL      | 5.7.26  | 数据库                |
 | Apisix     | 3.4.1   | API网关              |
 | harbor     | 1.8.6   | docker私有仓库         |
-| python     | 3.13.9  | 各服务开发语言            |
+| python     | 3.13.9  | 智能体开发语言            |
 | Consul     | 1.7.3   | 服务注册/发现            |
 | Github     | -       | 代码托管和项目管理          |
 | Kafka      | 3.0.1   | 收集Apisix日志、项目的核心组件 |
