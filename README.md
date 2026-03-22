@@ -1,4 +1,8 @@
-# 库存智能预警系统
+# 库存智能助手
+
+## 项目简介
+库存助手是一个可以用来操作库存系统的AI Agent，依托[商品服务](https://github.com/zhanshen02154/product)进行开发，进一步挖掘库存系统的价值，是[事件驱动微服务](https://github.com/zhanshen02154/go-micro-service)的
+附属产品。
 
 ## 目录结构
 ```tree
@@ -56,14 +60,24 @@
 │   ├── bootstrap.sh        # 环境初始化脚本
 │   ├── start_agent.sh      # 启动Agent服务
 │   └── load_test_data.py   # 加载测试数据
-│
-├── docker/                 # 容器化配置
-│   ├── Dockerfile
-│   └── docker-compose.yml  # 
-│
-├── docs/                   # 项目文档
-│   ├── architecture.md     # 架构设计文档
-│   ├── api_integration.md  # 与Go微服务的API对接文档
-│   └── agent_workflow.md   # Agent处理流程图
-│
 ```
+
+## 技术选型
+| 开发语言及工具    | 版本      | 用途                 |
+|------------|---------|--------------------|
+| kubernetes | 1.23.1  | 容器编排               |
+| docker     | 20.10.7 | 容器运行               |
+| jenkins    | 2.346.1 | CI/CD              |
+| MySQL      | 5.7.26  | 数据库                |
+| Apisix     | 3.4.1   | API网关              |
+| harbor     | 1.8.6   | docker私有仓库         |
+| golang     | 3.13.9  | 各服务开发语言            |
+| Consul     | 1.7.3   | 服务注册/发现            |
+| Github     | -       | 代码托管和项目管理          |
+| Kafka      | 3.0.1   | 收集Apisix日志、项目的核心组件 |
+| Gradio     | 6.5.1   | 前端页面               |
+| langchain  | 1.2.12  | 智能体开发框架            |
+
+## 声明
+- 请勿未经允许使用Releases的产物及源码用于商业用途，若需合作请发送邮件到zhanshen02154@gmail.com联系作者本人。
+- 严禁将代码及产物（含附属品）用于非法活动如赌博、诈骗、洗钱等，一经发现将追究法律责任！
