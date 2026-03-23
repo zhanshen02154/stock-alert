@@ -5,6 +5,9 @@ import signal
 import threading
 from typing import Optional
 
+import uvicorn
+from fastapi import FastAPI
+import gradio as gr
 from config import ConsulConfigLoader
 from src.agents.inventory_agent import InventoryAgent
 from src.core.llm import LLMClientFactory
@@ -99,20 +102,24 @@ class Application:
         if not self.session_store:
             raise RuntimeError("SessionStore未初始化，请检查MySQL配置")
 
-        demo = create_gradio_app(
+        # 创建独立的FastAPI应用并添加健康检查端点
+        app = FastAPI()
+
+        @app.get("/health")
+        @app.get("/readiness")
+        async def health_check():
+            return {"status": "ok"}
+
+        logger.info(f"启动Gradio服务: http://{server_name}:{server_port}")
+
+        blocks = create_gradio_app(
             agent=self.agent,
             # session_store=self.session_store,
             config=self.config
         )
-        
-        logger.info(f"启动Gradio服务: http://{server_name}:{server_port}")
-        demo.launch(
-            server_name=server_name,
-            server_port=server_port,
-            share=False,
-            show_error=True,
-            prevent_thread_lock=False
-        )
+
+        srv = gr.mount_gradio_app(blocks=blocks, app=app, path="/")
+        uvicorn.run(srv, host=server_name, port=server_port)
 
     async def shutdown(self) -> None:
         """清理资源"""
@@ -120,7 +127,6 @@ class Application:
         if self.session_store:
             await self.session_store.close()
         logger.info("应用已关闭")
-
 
 def main() -> None:
     """主函数（同步版本）"""

@@ -95,6 +95,7 @@ class GradioChatApp:
         return demo
 
 
+
 def create_gradio_app(
     agent: InventoryAgent,
     config: Optional[Dict[str, Any]] = None
