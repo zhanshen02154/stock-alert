@@ -1,0 +1,55 @@
+# 排除测试目录
+tests/
+
+# 排除开发文件
+.git/
+.gitignore
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 排除文档
+docs/
+README*.md
+CLAUDE.md
+
+# 排除脚本（除非是Python脚本）
+scripts/
+!scripts/*.py
+
+# 排除CLI工具（除非是Python脚本）
+cli/
+!cli/*.py
+
+# 排除docker相关文件
+docker/
+docker-compose*.yml
+
+# 排除安装脚本
+install_skillhub.sh
+
+# 排除压缩包
+*.tar.gz
+*.zip
+
+# 排除配置文件（除了Python文件）
+*.yaml
+*.yml
+*.json
+
+# 排除K8s配置文件
+deployment.yaml
+service.yaml
+
+# 排除Python缓存文件
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 排除egg-info
+*.egg-info/
+*.egg
+
+# 排除日志
+*.log

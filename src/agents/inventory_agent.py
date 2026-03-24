@@ -1,22 +1,19 @@
-from typing import Optional, Dict, AsyncIterator, Any, List
+import logging
+from typing import Optional, Dict, AsyncIterator, List
 from langchain.agents import create_agent
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_core.prompts import HumanMessagePromptTemplate, PromptTemplate
-
+from langchain_core.messages import SystemMessage
 from src.agents.base_agent import BaseAgent
 from src.core.llm import LLMClientFactory
 from src.tools import QueryInventory
-from src.tools.registry import tool_registry
+
+logger = logging.getLogger(__name__)
 
 
 class InventoryAgent(BaseAgent):
     """智能库存预警Agent"""
     system_msg: str = """
     你是一个库存助手，你需要使用工具帮助用户解决库存的问题。
-    
-    # 你可以使用的工具如下：
-    - query_inventory: 查询库存信息
     """
 
     tools = []
@@ -38,7 +35,7 @@ class InventoryAgent(BaseAgent):
         Returns:
             Agent的响应文本
         """
-        result = self._agent.invoke(messages=[HumanMessage(content=message)])
+        result = self._agent.invoke({"messages": [{"role": "user", "content": message}]})
         final_msg = result["messages"][-1]
 
         if hasattr(final_msg, "content") and final_msg.content:
