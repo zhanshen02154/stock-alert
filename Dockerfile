@@ -1,7 +1,7 @@
 FROM python:3.13.9-slim AS builder
 
+ENV UV_INDEX="https://pypi.tuna.tsinghua.edu.cn/simple"
 ENV UV_INDEX_URL="https://pypi.tuna.tsinghua.edu.cn/simple"
-ENV UV_DEFAULT_INDEX="https://pypi.tuna.tsinghua.edu.cn/simple"
 
 # 安装pip（Python镜像已包含）并使用pip安装uv
 RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple  \
@@ -15,7 +15,7 @@ COPY pyproject.toml uv.lock ./
 
 # 使用uv安装依赖到虚拟环境
 RUN uv venv
-RUN uv sync --frozen -v
+RUN uv sync --frozen
 
 FROM python:3.13.9-slim
 
