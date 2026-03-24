@@ -1,5 +1,7 @@
-# 使用官方Python精简镜像
 FROM python:3.13.9-slim AS builder
+
+ENV UV_PYTHON_INSTALL_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple/
+ENV UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
 
 # 安装pip（Python镜像已包含）并使用pip安装uv
 RUN pip install --no-cache-dir uv
@@ -14,7 +16,6 @@ COPY pyproject.toml uv.lock ./
 RUN uv venv
 RUN uv sync --frozen
 
-# 第二阶段：运行阶段
 FROM python:3.13.9-slim
 
 # 设置工作目录
@@ -31,14 +32,11 @@ ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONPATH=/app
 
 # 复制Python源代码
-COPY src/ ./src/
-COPY config/ ./config/
+COPY --chown=app:app src/ ./src/
+COPY --chown=app:app config/ ./config/
 
 # 确保所有.py文件存在（验证）
 RUN find ./src ./config -name "*.py" | head -5
-
-# 更改文件所有权
-RUN chown -R appuser:appuser /app
 
 # 切换到非root用户
 USER appuser
