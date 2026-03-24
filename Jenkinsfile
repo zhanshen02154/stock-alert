@@ -41,7 +41,7 @@ pipeline {
 							withKubeConfig([credentialsId: 'kubernetes-config', serverUrl: "$k8s_api_server", namespace: 'dev']) {
 								sh """
 								set +x
-								/usr/bin/kubectl set image deployment/stock-alert stock-alert-container=${DOCKER_IMAGE}:${DOCKER_TAG} -n dev --record
+								/usr/bin/kubectl set image deployment/stock-alert stock-alert=${DOCKER_IMAGE}:${DOCKER_TAG} -n dev --record
 								/usr/bin/kubectl rollout status deployment/stock-alert -n dev --timeout 360s
 								"""
 							}
