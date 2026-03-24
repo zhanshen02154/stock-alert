@@ -14,7 +14,7 @@ class QwQClient(BaseLLMClient):
         model_name: str = "qwen-plus",
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
-        temperature: float = 0,
+        temperature: float = 0.1,
         **kwargs: Any
     ):
         api_key = api_key or os.getenv("DASHSCOPE_API_KEY")
