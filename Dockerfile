@@ -1,10 +1,10 @@
 FROM python:3.13.9-slim AS builder
 
-ENV UV_PYTHON_INSTALL_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple/
-ENV UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+ENV UV_INDEX_URL="https://pypi.tuna.tsinghua.edu.cn/simple"
 
 # 安装pip（Python镜像已包含）并使用pip安装uv
-RUN pip install --no-cache-dir uv
+RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple  \
+    && pip install --no-cache-dir uv
 
 # 设置工作目录
 WORKDIR /app
