@@ -3,6 +3,7 @@ pipeline {
 	environment {
 		DOCKER_IMAGE = '192.168.0.62/agent/stock-alert'
 		DOCKER_TAG = "${env.GIT_BRANCH}-${env.GIT_COMMIT.substring(0, 8)}"
+		DOCKER_BUILDKIT = '1'
 	}
 	stages {
 		stage('Build and Push Docker Image') {
