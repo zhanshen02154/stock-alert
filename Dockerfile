@@ -15,7 +15,7 @@ COPY pyproject.toml uv.lock ./
 
 # 使用uv安装依赖到虚拟环境
 RUN uv venv
-RUN uv sync --frozen
+RUN uv sync --frozen --default-index https://pypi.tuna.tsinghua.edu.cn/simple
 
 FROM python:3.13.9-slim
 
