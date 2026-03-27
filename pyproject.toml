@@ -15,5 +15,8 @@ dependencies = [
     "typing-extensions>=4.9.0",
     "protobuf>=7.34.0",
     "gradio==6.5.1",
-    "aiomysql>=0.2.0",
+    "pymysql>=1.1.0",
+    "dbutils>=3.1.0",
+    "langgraph-checkpoint-mysql>=3.0.0",
+    "python-dotenv",
 ]
