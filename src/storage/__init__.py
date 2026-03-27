@@ -1,4 +1,5 @@
 """存储模块"""
-from .session_store import SessionStore, MySQLSessionStore
+from .session_store import SessionStore
+from .mysql import MySQLSessionStore
 
 __all__ = ["SessionStore", "MySQLSessionStore"]

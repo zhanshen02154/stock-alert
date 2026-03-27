@@ -2,6 +2,8 @@
 import os
 from typing import Any, Optional
 
+from langchain_core.language_models import ModelProfile
+
 from ..base import BaseLLMClient
 from langchain_qwq import ChatQwen
 
@@ -27,5 +29,6 @@ class QwQClient(BaseLLMClient):
             api_key=self.api_key,
             base_url=self.base_url,
             temperature=self.temperature,
-            **self.extra_params
+            timeout=10.0,
+            profile=ModelProfile(max_input_tokens=1024)
         )

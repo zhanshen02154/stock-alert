@@ -1,20 +1,15 @@
 import asyncio
 import logging
 import os
-import signal
-import threading
 from typing import Optional
-
-import uvicorn
-from fastapi import FastAPI
-import gradio as gr
+from dotenv import load_dotenv, set_key
 from config import ConsulConfigLoader
 from src.agents.inventory_agent import InventoryAgent
 from src.core.llm import LLMClientFactory
-from src.events.consumer import create_consumer_from_config
-from src.events.handlers import registry
-from src.storage.session_store import MySQLSessionStore
-from src.ui.gradio_app import create_gradio_app
+from src.repository.session import create_session_repository
+from src.service.session import create_session_service
+from src.storage.mysql import create_mysql_session_store
+from src.ui.gradio_app import create_gradio_app, GradioChatApp
 
 # 配置日志
 logging.basicConfig(
@@ -29,17 +24,28 @@ class Application:
 
     def __init__(self):
         self.config: dict = {}
-        self.session_store: Optional[MySQLSessionStore] = None
         self.agent: Optional[InventoryAgent] = None
-        self.kafka_consumer = None
-        self._shutdown_event = asyncio.Event()
+        self.gradio_app: Optional[GradioChatApp] = None
+        self._shutdown_called = False
+        self.mysql_store = None
 
-    def initialize(self) -> None:
-        """初始化应用（同步版本）"""
+    async def __aenter__(self):
+        """异步上下文管理器入口"""
+        await self.initialize()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """异步上下文管理器出口，确保资源释放"""
+        await self.shutdown()
+        # 返回False让异常正常传播
+        return False
+
+    async def initialize(self):
+        """初始化应用资源"""
         # 从Consul加载配置
         consul_host = os.getenv("CONSUL_HOST", "127.0.0.1")
         consul_port = int(os.getenv("CONSUL_PORT", "8500"))
-        
+
         config_loader = ConsulConfigLoader(host=consul_host, port=consul_port)
         self.config = config_loader.load_config(prefix="agent/stock-alert")
         logger.info("配置加载完成")
@@ -48,123 +54,70 @@ class Application:
         LLMClientFactory.initialize(config=self.config.get("llm", {}))
         logger.info("LLM客户端初始化完成")
 
-        # 初始化MySQL会话存储
-        mysql_config = self.config.get("mysql", {})
-        if mysql_config:
-            self.session_store = MySQLSessionStore(mysql_config)
-            # 同步初始化
-            asyncio.get_event_loop().run_until_complete(self.session_store.initialize())
-            logger.info("MySQL会话存储初始化完成")
-        else:
-            logger.warning("未配置MySQL，会话存储功能不可用")
-
-        # 初始化Agent
-        self.agent = InventoryAgent("inventory", self.config.get("llm", {}))
-        logger.info("Agent初始化完成")
-
-    async def run_kafka_consumer(self) -> None:
-        """运行Kafka消费者"""
-        if "broker" not in self.config:
-            logger.info("未配置broker，跳过Kafka消费者启动")
-            return
-
-        self.config['broker']['consumer']['hosts'] = self.config['broker']['hosts']
-        self.kafka_consumer = create_consumer_from_config(config=self.config['broker']['consumer'])
-
-        loop = asyncio.get_running_loop()
-
-        def handle_shutdown():
-            self._shutdown_event.set()
-            if self.kafka_consumer:
-                self.kafka_consumer.stop()
-
-        # 注册信号处理
-        for sig in (signal.SIGINT, signal.SIGTERM):
-            try:
-                loop.add_signal_handler(sig, handle_shutdown)
-            except NotImplementedError:
-                pass  # Windows不支持
-
-        try:
-            await self.kafka_consumer.start()
-        finally:
-            for sig in (signal.SIGINT, signal.SIGTERM):
-                try:
-                    loop.remove_signal_handler(sig)
-                except NotImplementedError:
-                    pass
-
-    def run_gradio(self, server_name: str = "0.0.0.0", server_port: int = 7860) -> None:
-        """运行Gradio界面"""
-        if not self.agent:
-            raise RuntimeError("Agent未初始化")
-        
-        if not self.session_store:
-            raise RuntimeError("SessionStore未初始化，请检查MySQL配置")
-
-        # 创建独立的FastAPI应用并添加健康检查端点
-        app = FastAPI()
-
-        @app.get("/health")
-        @app.get("/readiness")
-        async def health_check():
-            return {"status": "ok"}
-
-        logger.info(f"启动Gradio服务: http://{server_name}:{server_port}")
-
-        blocks = create_gradio_app(
-            agent=self.agent,
-            # session_store=self.session_store,
-            config=self.config
+        # 创建数据库存储层
+        self.mysql_store = create_mysql_session_store(
+            config=self.config.get("mysql", {})
         )
 
-        srv = gr.mount_gradio_app(blocks=blocks, app=app, path="/")
-        uvicorn.run(srv, host=server_name, port=server_port)
+        inventory_agent = InventoryAgent(
+            agent_name="inventory",
+            llm_config=self.config.get("agents").get("inventory", {})
+        )
+        session_service = create_session_service(
+            session_repo=create_session_repository(session_store=self.mysql_store)
+        )
+        self.gradio_app = create_gradio_app(
+            agent=inventory_agent,
+            session_store=session_service
+        )
+        self.agent = inventory_agent
 
-    async def shutdown(self) -> None:
-        """清理资源"""
-        logger.info("正在关闭应用...")
-        if self.session_store:
-            await self.session_store.close()
-        logger.info("应用已关闭")
+        self.mysql_store.initialize()
+        self.gradio_app.start()
 
-def main() -> None:
-    """主函数（同步版本）"""
+    async def shutdown(self):
+        """优雅关闭应用"""
+        if self._shutdown_called:
+            return
+
+        self._shutdown_called = True
+        logger.info("开始优雅关闭应用...")
+
+        # 1. 停止Gradio WebUI服务（等待后台任务完成）
+        # if self.gradio_app:
+        #     logger.info("停止Gradio应用...")
+        #     await self.gradio_app.close()
+
+        # 2. 关闭数据库连接池
+        if self.mysql_store:
+            logger.info("关闭数据库连接...")
+            self.mysql_store.close()
+
+        logger.info("应用关闭完成")
+
+async def main():
     app = Application()
-    
+
     try:
-        app.initialize()
-        
-        # 获取运行模式
-        mode = os.getenv("RUN_MODE", "gradio")  # gradio | kafka
-        
-        if mode == "gradio":
-            # 仅运行Gradio
-            app.run_gradio()
-        elif mode == "kafka":
-            # 仅运行Kafka消费者
-            asyncio.run(app.run_kafka_consumer())
-        elif mode == "both":
-            # 同时运行：Kafka在后台线程
-            def run_kafka():
-                asyncio.run(app.run_kafka_consumer())
+        # 初始化应用
+        async with app:
+            logger.info("应用初始化完成，启动Gradio服务器...")
             
-            kafka_thread = threading.Thread(target=run_kafka, daemon=True)
-            kafka_thread.start()
-            
-            # 主线程运行Gradio
-            app.run_gradio()
-        else:
-            logger.error(f"未知的运行模式: {mode}")
-            
+            # 直接运行Gradio服务器（阻塞直到关闭）
+            await app.gradio_app.serve()
+
     except KeyboardInterrupt:
-        logger.info("收到中断信号")
+        logger.info("收到键盘中断(Ctrl+C)，开始关闭...")
+        await app.shutdown()
     except Exception as e:
-        logger.error(f"应用运行错误: {e}", exc_info=True)
+        logger.error(f"应用运行异常: {e}", exc_info=True)
+        await app.shutdown()
         raise
     finally:
-        asyncio.run(app.shutdown())
-
+        # 清理异步生成器
+        loop = asyncio.get_event_loop()
+        await loop.shutdown_asyncgens()
+        logger.info("程序退出")
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
