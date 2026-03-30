@@ -1,8 +1,9 @@
 pipeline {
 	agent any
 	environment {
-		DOCKER_IMAGE = '192.168.0.62/microservice/stock-alert'
+		DOCKER_IMAGE = '192.168.0.62/agent/stock-alert'
 		DOCKER_TAG = "${env.GIT_BRANCH}-${env.GIT_COMMIT.substring(0, 8)}"
+		DOCKER_BUILDKIT = '1'
 	}
 	stages {
 		stage('Build and Push Docker Image') {
@@ -40,7 +41,7 @@ pipeline {
 							withKubeConfig([credentialsId: 'kubernetes-config', serverUrl: "$k8s_api_server", namespace: 'dev']) {
 								sh """
 								set +x
-								/usr/bin/kubectl set image deployment/stock-alert stock-alert-container=${DOCKER_IMAGE}:${DOCKER_TAG} -n dev --record
+								/usr/bin/kubectl set image deployment/stock-alert stock-alert=${DOCKER_IMAGE}:${DOCKER_TAG} -n dev --record
 								/usr/bin/kubectl rollout status deployment/stock-alert -n dev --timeout 360s
 								"""
 							}

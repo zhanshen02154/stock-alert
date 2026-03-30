@@ -1,10 +1,12 @@
 import os
 from typing import Any
+
 import requests
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 from src.tools.base_tool import BaseToolInput, ToolResult
 from src.tools.registry import tool_registry
+from src.utils.api_client import create_http_client
 
 
 class QueryInventoryInput(BaseToolInput):
@@ -19,17 +21,18 @@ class QueryInventoryOutput(BaseModel):
     status: int = Field(default=0, description="商品状态（1上架 0下架），引用该数据时不展示数值")
     stock_warn: int = Field(default=0, description="商品库存预警值")
 
+@tool_registry.register(name="query_inventory")
 class QueryInventory(BaseTool):
     name: str = "query_inventory"
     description: str = "查询单个商品的库存信息"
     args_schema: type[BaseModel] = QueryInventoryInput
-    http_client: requests.Session = None
+    http_client: requests.Session | None = None
     base_url: str = ""
     timeout: int = 5
 
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
-        self.http_client = requests.Session()
+        self.http_client = create_http_client()
         self.base_url = os.getenv("MICROSERVICE_URL") + "/api/v1"
         self.timeout = 5
 
@@ -40,11 +43,21 @@ class QueryInventory(BaseTool):
         if resp.status_code != 200:
             return ToolResult(status="failed", data=None, error=resp.text)
         data = resp.json()
-        QueryInventoryOutput()
         return ToolResult(status="success", data=QueryInventoryOutput(**data), error=None)
 
     def _arun(self, *args: Any, **kwargs: Any):
         raise NotImplementedError("async version not implemented")
+
+    def close(self):
+        """关闭 HTTP 连接池"""
+        if self.http_client:
+            try:
+                self.http_client.close()
+                self.http_client = None
+            except Exception as e:
+                # 记录错误但不抛出异常，避免影响其他资源的关闭
+                import logging
+                logging.getLogger(__name__).error(f"关闭HTTP客户端失败: {e}")
 
 
 
