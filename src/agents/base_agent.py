@@ -17,5 +17,9 @@ class BaseAgent(ABC):
         pass
 
     @abstractmethod
-    def close(self):
+    async def close(self):
+        pass
+
+    @abstractmethod
+    def healthz(self) -> bool:
         pass
