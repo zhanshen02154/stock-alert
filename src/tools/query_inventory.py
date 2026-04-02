@@ -11,11 +11,11 @@ from src.utils.api_client import create_http_client
 
 class QueryInventoryInput(BaseToolInput):
     """检查库存输入参数"""
-    sku_id: str = Field(description="商品SKU ID必须要SKU开头", pattern=r"^SKU")
+    sku_id: str = Field(description="商品SKU编号必须要SKU开头", pattern=r"^SKU")
 
 class QueryInventoryOutput(BaseModel):
     """检查库存输出参数"""
-    sku_id: str = Field(default="", description="商品SKU ID")
+    sku_id: str = Field(default="", description="商品SKU编号")
     name: str = Field(default="", description="商品SKU名称")
     stock: int = Field(default=0, description="商品当前库存")
     status: int = Field(default=0, description="商品状态（1上架 0下架），引用该数据时不展示数值")
@@ -25,7 +25,7 @@ class QueryInventoryOutput(BaseModel):
 class QueryInventory(BaseTool):
     name: str = "query_inventory"
     description: str = "查询单个商品的库存信息"
-    args_schema: type[BaseModel] = QueryInventoryInput
+    args_schema: type[BaseToolInput] = QueryInventoryInput
     http_client: requests.Session | None = None
     base_url: str = ""
     timeout: int = 5
@@ -43,6 +43,7 @@ class QueryInventory(BaseTool):
         if resp.status_code != 200:
             return ToolResult(status="failed", data=None, error=resp.text)
         data = resp.json()
+        resp.close()
         return ToolResult(status="success", data=QueryInventoryOutput(**data), error=None)
 
     def _arun(self, *args: Any, **kwargs: Any):
