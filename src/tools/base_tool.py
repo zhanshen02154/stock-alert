@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import TypeVar, Any
 
 from pydantic import BaseModel, Field
@@ -11,7 +12,7 @@ class Context:
     session_id: str
     metadata: dict = field(default_factory=dict)
 
-class ToolStatus[Enum]:
+class ToolStatus(Enum):
     SUCCESS = "success"
     FAILED = "failed"
     TIMEOUT = "timeout"
