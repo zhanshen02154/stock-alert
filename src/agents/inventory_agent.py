@@ -3,7 +3,8 @@ from typing import Optional, Dict, List, Any
 from langchain.agents import create_agent
 from langchain.agents.middleware import SummarizationMiddleware, ToolRetryMiddleware
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.prompts import HumanMessagePromptTemplate
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.redis import AsyncRedisSaver
@@ -29,7 +30,6 @@ class InventoryAgent(BaseAgent):
         super().__init__(agent_name=agent_name)
         self._started = False
         self.__config = conf
-        self.__tools = tool_registry.get_tools()
         self.llm = llm
         self.checkpointer = checkpointer
         self.__system_prompt = SYSTEM_PROMPTS.get("system_message")
@@ -47,7 +47,7 @@ class InventoryAgent(BaseAgent):
             Agent的响应文本
         """
         config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
-        result = self.__agent.invoke({"messages": [{"role": "user", "content": message}]}, config)
+        result = self.__agent.invoke({"messages": [HumanMessage(content=message)]}, config, config=config)
         final_msg = result["messages"][-1]
 
         if hasattr(final_msg, "content") and final_msg.content:
@@ -63,22 +63,62 @@ class InventoryAgent(BaseAgent):
         :return: 消息
         """
         config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
-        result = await self.__agent.ainvoke({"messages": [{"role": "user", "content": message}]}, config)
+        result = await self.__agent.ainvoke({"messages": [HumanMessage(content=message)]}, config=config)
         final_msg = result["messages"][-1]
         if hasattr(final_msg, "content") and final_msg.content:
             return [{"role": "assistant", "content": final_msg.content}]
         return [{"role": "assistant", "content": "执行错误"}]
+
+    async def astream(self, message: str, thread_id: str):
+        """
+        异步流式请求
+        :param message: 消息内容
+        :param thread_id: 会话ID
+        :return: 消息
+        """
+        config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
+        async for chunk in self.__agent.astream({"messages": [HumanMessage(content=message)]}, config=config, stream_mode="updates"):
+            for step, data in chunk.items():
+                if step == "model":
+                    last_message = data['messages'][-1]
+                    # 处理文本内容
+                    if hasattr(last_message, 'content') and last_message.content:
+                        yield {
+                            "type": "text",
+                            "text": f"{last_message.content}"
+                        }
+                elif step == "tool_calls":
+                    # 处理工具调用
+                    for tool_call in data.get('messages', []):
+                        if hasattr(tool_call, 'name'):
+                            yield {
+                                "type": "tool_call",
+                                "name": tool_call.name,
+                                "text": f"调用工具: {tool_registry.get_name_by_tool(tool_call.name)}"
+                            }
+
+    async def summary(self, message: str) -> str:
+        """总结首轮对话"""
+        sys_prompt = """
+        请为以下对话内容生成不超过30字的标题: 
+        
+        {message}
+        """
+        template = HumanMessagePromptTemplate(prompt=sys_prompt).format(message=message)
+        resp = await self.llm.ainvoke({"messages": [template, SystemMessage(content=self.__summary_prompt)]})
+        return resp["messages"][-1].content
 
     def start(self):
         """启动"""
         if self._started:
             return
         self._started = True
-        self.__agent = create_agent(model=self.llm, system_prompt=SystemMessage(content=self.__system_prompt, checkpointer=self.checkpointer),
+        self.tools = tool_registry.get_tools()
+        self.__agent = create_agent(model=self.llm, system_prompt=SystemMessage(content=self.__system_prompt), checkpointer=self.checkpointer,
                                     middleware=[
                                         SummarizationMiddleware(model=self.llm,
                                                                 trigger=[("fraction", 0.8), ("tokens", 2048)],
-                                                                keep=["messages", 10],
+                                                                keep=["messages", 5],
                                                                 summary_prompt=self.__summary_prompt),
                                         ToolRetryMiddleware(
                                             max_retries=3,  # 最多重试 3 次
@@ -86,9 +126,9 @@ class InventoryAgent(BaseAgent):
                                             initial_delay=1.0,  # 从 1 秒延迟开始
                                             max_delay=30,  # 将延迟上限设置为 30 秒
                                             jitter=True,  # 添加随机抖动以避免“惊群”问题
-                                            tools=self.__tools
+                                            tools=self.tools
                                         ),
-                                    ], tools=self.__tools)
+                                    ], tools=self.tools)
 
     async def close(self):
         """关闭Agent，释放所有资源"""
@@ -98,20 +138,16 @@ class InventoryAgent(BaseAgent):
         self.__agent = None
         self.llm = None
         self.checkpointer = None
-
-        if self.tools:
-            for tool in self.tools:
-                tool.close()
         self.tools = None
         logger.info("库存Agent已关闭")
-
 
     async def remove_session(self, session_id: str):
         """删除会话"""
         try:
             await self.checkpointer.adelete_thread(session_id)
         except Exception as e:
-            raise e
+            logger.error(f"删除会话{session_id}失败: {e}")
+            raise
 
     def healthz(self) -> bool:
         """健康检查"""

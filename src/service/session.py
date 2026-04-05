@@ -31,3 +31,25 @@ class SessionService:
 
     def get_user_sessions(self, user_id: int, limit: int = 10):
         return self.__session_repo.get_user_sessions(user_id=user_id, limit=limit)
+
+    def update(self, session_id: str, title: str, user_id: int) -> None:
+        """
+        更新会话标题
+        
+        Args:
+            session_id: 会话ID
+            title: 新标题
+            user_id: 当前用户ID
+            
+        Raises:
+            ValueError: 会话不存在或不属于当前用户
+        """
+        # 检查会话是否存在且属于当前用户
+        session = self.__session_repo.find_session_by_id(session_id, user_id)
+        if not session:
+            raise ValueError("会话不存在或无权限访问")
+        
+        # 更新标题
+        success = self.__session_repo.update_session_title(session_id, title)
+        if not success:
+            raise ValueError("更新会话标题失败")

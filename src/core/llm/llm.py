@@ -17,8 +17,9 @@ def get_qwen_llm_client() -> ChatQwen:
         temperature=conf.get("temperature", 0.1),
         timeout=conf.get("timeout", 60),
         max_retries=conf.get("max_retries", 3),
-        max_tokens=conf.get("max_tokens", 4096),
-        profile=ModelProfile(max_input_tokens=conf.get("max_input_tokens", 2048))
+        max_tokens=conf.get("max_tokens", 8192),
+        profile=ModelProfile(max_input_tokens=conf.get("max_input_tokens", 2048)),
+        streaming=True
     )
 
 

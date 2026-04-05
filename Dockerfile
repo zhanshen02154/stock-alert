@@ -43,11 +43,11 @@ RUN find ./src ./config -name "*.py" | head -5
 USER appuser
 
 # 暴露端口
-EXPOSE 7860
+EXPOSE 8000
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:7860/health')"
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/check/health')"
 
 # 设置入口点
 CMD ["python", "-m", "src.main"]

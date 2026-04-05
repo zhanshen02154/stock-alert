@@ -11,6 +11,7 @@ from src.agents.inventory_agent import InventoryAgent
 from src.core.llm.llm import get_qwen_llm_client
 from src.repository.session import SessionRepository
 from src.repository.user import UserRepository
+from src.service.chat import ChatService
 from src.service.session import SessionService
 from src.service.user import UserService
 
@@ -42,7 +43,6 @@ def get_mysql_store_from_app(request: Request):
 @lru_cache(maxsize=1)
 def get_session_repo(mysql_store = Depends(get_mysql_store_from_app)) -> SessionRepository:
     return SessionRepository(session_store=mysql_store)
-
 
 def get_checkpointer(request: Request) -> BaseCheckpointSaver:
     """获取checkpointer (从app.state)"""
@@ -83,3 +83,9 @@ def get_user_service(
 @lru_cache(maxsize=1)
 def get_session_service(session_repo: SessionRepository = Depends(get_session_repo), agent: InventoryAgent = Depends(get_inventory_agent)) -> SessionService:
     return SessionService(session_repo=session_repo, agent=agent)
+
+
+@lru_cache(maxsize=1)
+def get_chat_service(session_repo: SessionRepository = Depends(get_session_repo), agent: InventoryAgent = Depends(get_inventory_agent)) -> ChatService:
+    """获取聊天服务"""
+    return ChatService(session_repo=session_repo, agent=agent)

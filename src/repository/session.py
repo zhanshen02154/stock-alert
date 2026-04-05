@@ -72,8 +72,6 @@ class SessionRepository:
                 )
 
             conn.commit()
-
-        logger.debug(f"保存消息: session={session_id}, role={role}")
         return message_id
 
     def create_session(
@@ -116,6 +114,69 @@ class SessionRepository:
             "updated_at": row[3].isoformat()
         }
 
+    def find_session_by_id(self, session_id: str, user_id: int) -> dict[str, Any]:
+        """查询会话信息"""
+        with self.session_store.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT session_id, title, created_at, updated_at
+                    FROM chat_sessions
+                    WHERE session_id = %s AND user_id = %s LIMIT 1
+                    """,
+                    (session_id, user_id)
+                )
+                row = cur.fetchone()
+        return {
+            "id": row[0],
+            "title": row[1],
+            "created_at": row[2].isoformat(),
+            "updated_at": row[3].isoformat()
+        }
+
+    def find_message_by_id(self, message_id: int):
+        """查询消息"""
+        with self.session_store.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT id, session_id, role, content, created_at
+                    FROM chat_messages
+                    WHERE id = %s LIMIT 1
+                    """,
+                    (message_id,)
+                )
+                row = cur.fetchone()
+        return {
+            "id": row[0],
+            "session_id": row[1],
+            "role": row[2],
+            "content": row[3],
+            "created_at": row[4].isoformat()
+        }
+
+    def find_session_last_message(self, session_id: str):
+        """查询消息"""
+        with self.session_store.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT id, session_id, role, content, created_at
+                    FROM chat_messages
+                    WHERE session_id = %s ORDER BY created_at DESC LIMIT 1
+                    """,
+                    (session_id,)
+                )
+                row = cur.fetchone()
+        return {
+            "id": row[0],
+            "session_id": row[1],
+            "role": row[2],
+            "content": row[3],
+            "created_at": row[4].isoformat()
+        }
+
+
     def delete_session(self, session_id: str) -> None:
         """删除会话及其消息"""
         conn = self.session_store.get_connection()
@@ -141,6 +202,16 @@ class SessionRepository:
                     (json.dumps(metadata), session_id)
                 )
         logger.debug(f"更新会话metadata: {session_id}")
+
+    def update_session_title(self, session_id: str, title: str) -> bool:
+        """更新会话标题，返回是否更新成功"""
+        with self.session_store.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE chat_sessions SET title = %s WHERE session_id = %s",
+                    (title, session_id)
+                )
+                return cur.rowcount > 0
 
     def get_user_sessions(
             self,

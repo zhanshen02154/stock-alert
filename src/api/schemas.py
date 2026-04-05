@@ -12,8 +12,24 @@ class ApiResponse(BaseModel, Generic[T]):
 
 class ChatRequest(BaseModel):
     """聊天请求数据"""
-    message: str = Field(description="用户输入消息")
-    thread_id: str = Field(description="会话ID")
+    content: str = Field(description="消息内容")
+    chat_id: str = Field(description="会话ID")
+
+
+class ChatResponse(BaseModel):
+    """聊天响应数据"""
+    message_id: int = Field(description="消息ID")
+    content: str = Field(description="消息内容")
+
+
+class SessionUpdateRequest(BaseModel):
+    """会话更新请求数据"""
+    chat_id: str = Field(description="会话ID")
+    chat_name: str = Field(description="会话标题")
+
+class ChatAiRequest(BaseModel):
+    """聊天AI请求数据"""
+    chat_id: str = Field(description="会话ID")
 
 
 class MessagesRequest(BaseModel):

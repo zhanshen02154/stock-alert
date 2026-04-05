@@ -81,3 +81,36 @@
 ## 声明
 - 请勿未经允许使用Releases的产物及源码用于商业用途，若需合作请发送邮件到zhanshen02154@gmail.com联系作者本人。
 - 严禁将代码及产物（含附属品）用于非法活动如赌博、诈骗、洗钱等，一经发现将追究法律责任！
+
+## 前端流式传输信息
+```json
+{
+   "type": "chunk",
+  "content": "消息内容",
+  "message_id": "消息ID",
+  "full_content": "完整消息内容"
+}
+```
+
+### 前端流式传输回调函数
+```javascript
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        console.log('SSE收到数据:', data)
+        
+        if (data.type === 'chunk') {
+          onChunk(data.content, data.message_id, data.full_content)
+        } else if (data.type === 'done') {
+          onComplete(data.full_content, data.message_id)
+          eventSource.close()
+        } else if (data.type === 'error') {
+          onError(data.message)
+          eventSource.close()
+        }
+      } catch (error) {
+        console.error('解析SSE数据失败:', error)
+        onError('解析服务器响应失败')
+      }
+    }
+```
