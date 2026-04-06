@@ -68,14 +68,13 @@
 | kubernetes | 1.23.1  | 容器编排               |
 | docker     | 20.10.7 | 容器运行               |
 | jenkins    | 2.346.1 | CI/CD              |
-| MySQL      | 5.7.26  | 数据库                |
+| MySQL      | 8.0.45  | 数据库                |
 | Apisix     | 3.4.1   | API网关              |
 | harbor     | 1.8.6   | docker私有仓库         |
 | python     | 3.13.9  | 智能体开发语言            |
 | Consul     | 1.7.3   | 服务注册/发现            |
 | Github     | -       | 代码托管和项目管理          |
 | Kafka      | 3.0.1   | 收集Apisix日志、项目的核心组件 |
-| Gradio     | 6.5.1   | 前端页面               |
 | langchain  | 1.2.12  | 智能体开发框架            |
 
 ## 声明
