@@ -84,7 +84,7 @@ async def lifespan(fastapp: FastAPI):
 
 app = FastAPI(title="智能库存Agent", lifespan=lifespan, root_path="/api/v1")
 app.add_middleware(AuthMiddleware)
-app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:3000"], allow_methods=["OPTIONS", "GET", "POST", "PUT", "DELETE"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["OPTIONS", "GET", "POST", "PUT", "DELETE"], allow_headers=["*"])
 
 app.include_router(router=router)
 app.include_router(router=health_router)

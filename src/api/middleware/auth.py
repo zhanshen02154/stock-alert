@@ -36,6 +36,7 @@ class AuthMiddleware:
 
         # 获取请求路径
         path = scope.get("path", "")
+        logger.info(f"path: {path}")
 
         # 检查是否在排除列表中
         if path in self.EXCLUDED_PATHS or path.startswith("/docs") or path.startswith("/openapi"):
