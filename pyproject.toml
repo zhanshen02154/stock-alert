@@ -21,6 +21,7 @@ dependencies = [
     "bcrypt>=4.0.0",
     "langgraph-checkpoint-redis>=0.4.0",
     "fastapi>=0.135.3",
+    "uvicorn[standard]>=0.43.0",
 ]
 
 [[tool.uv.index]]
