@@ -1,9 +1,7 @@
 import json
 import logging
-
 from fastapi import status
 from starlette.types import ASGIApp, Receive, Scope, Send
-
 from src.storage import RedisClient
 from src.utils.jwt import JWTUtil
 
