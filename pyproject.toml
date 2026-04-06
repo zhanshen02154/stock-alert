@@ -19,4 +19,6 @@ dependencies = [
     "dbutils>=3.1.0",
     "langgraph-checkpoint-mysql>=3.0.0",
     "python-dotenv",
+    "pyjwt>=2.8.0",
+    "bcrypt>=4.0.0",
 ]

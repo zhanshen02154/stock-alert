@@ -2,8 +2,9 @@ import logging
 from typing import Dict, Any, Optional
 
 import pymysql
-from dbutils.pooled_db import PooledDB
+from dbutils.pooled_db import PooledDB, PooledSharedDBConnection, PooledDedicatedDBConnection
 
+from config.settings import get_storage_config
 from src.storage import SessionStore
 
 logger = logging.getLogger(__name__)
@@ -21,31 +22,31 @@ class MySQLSessionStore(SessionStore):
         """
         self.config = config
         self.pool: Optional[PooledDB] = None
+        self.__initialize()
 
-    def _get_connection(self):
+    def get_connection(self) -> PooledSharedDBConnection | PooledDedicatedDBConnection:
         """从连接池获取连接"""
         if self.pool is None:
-            raise RuntimeError("连接池未初始化，请先调用 initialize()")
+            self.__initialize()
         return self.pool.connection()
 
-    def initialize(self) -> None:
+    def __initialize(self) -> None:
         """初始化连接池"""
         if self.pool is not None:
             return
-
         self.pool = PooledDB(
             creator=pymysql,
-            maxconnections=self.config.get("max_connections", 20),
-            mincached=self.config.get("min_cached", 2),
-            maxcached=self.config.get("max_cached", 5),
-            blocking=True,
+            maxconnections=self.config.get("max_connections", 30),
+            mincached=self.config.get("min_cached", 5),
+            maxcached=self.config.get("max_cached", 20),
             host=self.config.get("host", "localhost"),
             port=self.config.get("port", 3306),
             user=self.config["user"],
             password=self.config["password"],
             database=self.config["database"],
             charset="utf8mb4",
-            autocommit=True,
+            autocommit=False,
+            ping=1
         )
         logger.info("MySQL同步连接池初始化完成")
 
@@ -53,15 +54,11 @@ class MySQLSessionStore(SessionStore):
         """关闭连接池"""
         if self.pool:
             try:
-                # PooledDB 没有 close 方法，但可以关闭所有缓存的连接
-                # 通过关闭连接池中的所有连接来释放资源
-                # 注意：PooledDB 本身没有提供 close 方法
-                # 连接会在归还时自动管理
-                self.pool = None
+                self.pool.close()
                 logger.info("MySQL连接池已关闭")
             except Exception as e:
                 logger.error(f"关闭MySQL连接池失败: {e}", exc_info=True)
 
-
-def create_mysql_session_store(config: dict[str, Any]) -> MySQLSessionStore:
-    return MySQLSessionStore(config=config)
+def create_mysql_session_store() -> MySQLSessionStore:
+    conf = get_storage_config("mysql")
+    return MySQLSessionStore(config=conf)

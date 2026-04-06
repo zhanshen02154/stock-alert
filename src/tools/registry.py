@@ -4,12 +4,14 @@
 class ToolRegistry:
     def __init__(self):
         self._tools = {}
+        self.__tool_name: dict[str, str] = {}
 
-    def register(self, name: str):
+    def register(self, name: str, description: str):
      """工具装饰器"""
      def decorator(cls):
          tool_name = name or cls.__name__
          self._tools[tool_name] = cls
+         self.__tool_name[name] = description
          return cls
      return decorator
 
@@ -30,6 +32,9 @@ class ToolRegistry:
         for tool_cls in self._tools.values():
             tool_names.append(tool_cls.__name__)
         return tool_names
+
+    def get_name_by_tool(self, tool_name: str) -> str:
+        return self.__tool_name.get(tool_name, "unknown")
 
 # 创建全局注册器实例
 tool_registry = ToolRegistry()
