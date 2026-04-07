@@ -12,8 +12,3 @@ class SessionStore(ABC):
     def close(self) -> None:
         """关闭连接"""
         pass
-
-    @abstractmethod
-    def initialize(self) -> None:
-        """初始化"""
-        pass

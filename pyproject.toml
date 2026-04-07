@@ -14,9 +14,17 @@ dependencies = [
     "pyyaml>=6.0.1",
     "typing-extensions>=4.9.0",
     "protobuf>=7.34.0",
-    "gradio==6.5.1",
     "pymysql>=1.1.0",
     "dbutils>=3.1.0",
-    "langgraph-checkpoint-mysql>=3.0.0",
     "python-dotenv",
+    "pyjwt>=2.8.0",
+    "bcrypt>=4.0.0",
+    "langgraph-checkpoint-redis>=0.4.0",
+    "fastapi>=0.135.3",
+    "uvicorn[standard]>=0.43.0",
+    "python-multipart>=0.0.24",
 ]
+
+[[tool.uv.index]]
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true

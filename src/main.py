@@ -1,15 +1,23 @@
-import asyncio
 import logging
 import os
-from typing import Optional
-from dotenv import load_dotenv, set_key
+from contextlib import asynccontextmanager
+import uvicorn
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.checkpoint.redis import AsyncRedisSaver
 from config import ConsulConfigLoader
-from src.agents.inventory_agent import InventoryAgent
-from src.core.llm import LLMClientFactory
-from src.repository.session import create_session_repository
-from src.service.session import create_session_service
+from config.prompts import load_prompt_from_yaml
+from config.settings import GLOBAL_CONFIG
+from src.api.middleware import AuthMiddleware
+from src.api.routers.chat import router
+from src.api.routers.chat import router as chat_router
+from src.api.routers.health import router as health_router
+from src.api.routers.user import routers as user_router
+from src.core.llm import get_qwen_llm_client
 from src.storage.mysql import create_mysql_session_store
-from src.ui.gradio_app import create_gradio_app, GradioChatApp
+from src.storage.redis import create_redis_client
+from src.utils.api_client import ApiClientManager
 
 # 配置日志
 logging.basicConfig(
@@ -19,105 +27,75 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-class Application:
-    """应用程序主类"""
-
-    def __init__(self):
-        self.config: dict = {}
-        self.agent: Optional[InventoryAgent] = None
-        self.gradio_app: Optional[GradioChatApp] = None
-        self._shutdown_called = False
-        self.mysql_store = None
-
-    async def __aenter__(self):
-        """异步上下文管理器入口"""
-        await self.initialize()
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """异步上下文管理器出口，确保资源释放"""
-        await self.shutdown()
-        # 返回False让异常正常传播
-        return False
-
-    async def initialize(self):
-        """初始化应用资源"""
+@asynccontextmanager
+async def lifespan(fastapp: FastAPI):
+    logger.info("应用程序启动中...")
+    try:
         # 从Consul加载配置
         consul_host = os.getenv("CONSUL_HOST", "127.0.0.1")
         consul_port = int(os.getenv("CONSUL_PORT", "8500"))
-
         config_loader = ConsulConfigLoader(host=consul_host, port=consul_port)
-        self.config = config_loader.load_config(prefix="agent/stock-alert")
+        config_loader.load_config(prefix="agent/stock-alert")
         logger.info("配置加载完成")
 
-        # 初始化LLM客户端
-        LLMClientFactory.initialize(config=self.config.get("llm", {}))
-        logger.info("LLM客户端初始化完成")
+        load_prompt_from_yaml(file_path="config/prompts/system.yaml")
+        logger.info("系统提示词加载完成")
 
-        # 创建数据库存储层
-        self.mysql_store = create_mysql_session_store(
-            config=self.config.get("mysql", {})
-        )
+        fastapp.state.mysql_store = create_mysql_session_store()
+        fastapp.state.redis_client = create_redis_client()
+        await fastapp.state.redis_client.conn()  # 启动redis客户端
 
-        inventory_agent = InventoryAgent(
-            agent_name="inventory",
-            llm_config=self.config.get("agents").get("inventory", {})
-        )
-        session_service = create_session_service(
-            session_repo=create_session_repository(session_store=self.mysql_store)
-        )
-        self.gradio_app = create_gradio_app(
-            agent=inventory_agent,
-            session_store=session_service
-        )
-        self.agent = inventory_agent
+        # 创建checkpointer
+        conf = GLOBAL_CONFIG.get("checkpointer", {})
+        checkpointer_type = conf.get("type", "redis")
+        if checkpointer_type == "redis":
+            checkpointer = AsyncRedisSaver(redis_client=fastapp.state.redis_client.get_client())
+            await checkpointer.setup()
+            fastapp.state.checkpointer = checkpointer
+        else:
+            fastapp.state.checkpointer = InMemorySaver()
 
-        self.mysql_store.initialize()
-        self.gradio_app.start()
+        # 创建大模型
+        fastapp.state.qwen_llm = get_qwen_llm_client()
+        logger.info("应用程序已经启动")
 
-    async def shutdown(self):
-        """优雅关闭应用"""
-        if self._shutdown_called:
-            return
-
-        self._shutdown_called = True
-        logger.info("开始优雅关闭应用...")
-
-        # 1. 停止Gradio WebUI服务（等待后台任务完成）
-        # if self.gradio_app:
-        #     logger.info("停止Gradio应用...")
-        #     await self.gradio_app.close()
-
-        # 2. 关闭数据库连接池
-        if self.mysql_store:
-            logger.info("关闭数据库连接...")
-            self.mysql_store.close()
-
-        logger.info("应用关闭完成")
-
-async def main():
-    app = Application()
-
-    try:
-        # 初始化应用
-        async with app:
-            logger.info("应用初始化完成，启动Gradio服务器...")
-            
-            # 直接运行Gradio服务器（阻塞直到关闭）
-            await app.gradio_app.serve()
-
-    except KeyboardInterrupt:
-        logger.info("收到键盘中断(Ctrl+C)，开始关闭...")
-        await app.shutdown()
-    except Exception as e:
-        logger.error(f"应用运行异常: {e}", exc_info=True)
-        await app.shutdown()
-        raise
+        yield
     finally:
-        # 清理异步生成器
-        loop = asyncio.get_event_loop()
-        await loop.shutdown_asyncgens()
-        logger.info("程序退出")
+        logger.info("应用关闭中")
+        # 关闭MySQL连接
+        if hasattr(fastapp.state, 'mysql_store'):
+            fastapp.state.mysql_store.close()
+
+        # 关闭Redis连接
+        if hasattr(fastapp.state, 'redis_client'):
+            await fastapp.state.redis_client.aclose()
+
+        from src.api.dependencies import get_inventory_agent
+        from src.agents.inventory_agent import InventoryAgent
+        cached_agent: InventoryAgent | None = get_inventory_agent.cache.get((), None) if hasattr(get_inventory_agent,
+                                                                                                 'cache') else None
+        if cached_agent:
+            await cached_agent.close()
+
+        await ApiClientManager.close_all()
+        logger.info("关闭API客户端")
+        logger.info("应用已关闭")
+
+
+app = FastAPI(title="智能库存Agent", lifespan=lifespan, root_path="/api/v1")
+app.add_middleware(AuthMiddleware)
+app.add_middleware(CORSMiddleware, allow_origins=["http://47.113.218.195:30023", "http://127.0.0.1:3000", "http://47.113.218.195:32251"], allow_methods=["OPTIONS", "GET", "POST", "PUT", "DELETE"], allow_headers=["*"])
+
+app.include_router(router=router)
+app.include_router(router=health_router)
+app.include_router(router=user_router)
+app.include_router(router=chat_router)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    uvicorn.run(
+        app=app,
+        host="0.0.0.0",
+        port=8000,
+        log_level="info",
+        timeout_graceful_shutdown=15
+    )
