@@ -6,59 +6,82 @@
 
 ## 目录结构
 ```tree
-├── config/                 # 配置文件
+├── config/                     # 配置文件
 │   ├── __init__.py
-│   ├── settings.py         # 应用主要配置（模型API地址、微服务URL、Kafka配置等）
-│   └── prompts/            # 提示词模板集中管理
-│       ├── __init__.py
-│       ├── monitor.yaml    # 监控Agent提示词
-│       ├── decision.yaml   # 决策Agent提示词
-│       └── emergency.yaml  # 紧急预警提示词
+│   ├── settings.py             # 应用主要配置（模型API地址、微服务URL、Kafka配置等）
+│   └── prompts/                # 提示词模板集中管理
 │
-├── src/                    # 源代码主目录
+├── src/                        # 源代码主目录
 │   ├── __init__.py
-│   ├── main.py             # 应用主入口，启动消费者和Agent
+│   ├── main.py                 # 应用主入口，启动API服务和消费者
 │   │
-│   ├── core/               # 核心运行时与共享组件
+│   ├── core/                   # 核心运行时与共享组件
 │   │   ├── __init__.py
-│   │   ├── agent_state.py  # 定义LangGraph的State
-│   │   ├── callbacks.py    # LangChain回调（用于日志、监控）
-│   │   └── exceptions.py   # 自定义异常
+│   │   ├── agent_state.py      # 定义LangGraph的State
+│   │   ├── callbacks.py        # LangChain回调（用于日志、监控）
+│   │   ├── exceptions.py       # 自定义异常
+│   │   └── llm/                # LLM模型封装
+│   │       ├── __init__.py
+│   │       └── llm.py          # LLM客户端
 │   │
-│   ├── tools/              # **工具**
+│   ├── agents/                 # 各个Agent的定义
 │   │
-│   ├── agents/             # 各个Agent的定义
+│   ├── api/                    # API接口层
 │   │   ├── __init__.py
-│   │   ├── base_agent.py   # Agent基类
-│   │   ├── monitor_agent.py    # 监控Agent
-│   │   ├── decision_agent.py    # 决策Agent
-│   │   └── orchestrator.py      # 多Agent编排器
+│   │   ├── dependencies.py     # 依赖注入
+│   │   ├── schemas.py          # 请求/响应模型
+│   │   ├── middleware/         # 中间件
+│   │   │   ├── __init__.py
+│   │   │   └── auth.py         # 认证中间件
+│   │   └── routers/            # 路由
+│   │       ├── __init__.py
+│   │       ├── chat.py         # 聊天路由
+│   │       ├── health.py       # 健康检查路由
+│   │       └── user.py         # 用户路由
 │   │
-│   ├── events/             # 事件处理层（与Kafka对接）
+│   ├── events/                 # 事件处理层（与Kafka对接）
 │   │   ├── __init__.py
-│   │   ├── consumer.py     # 订阅“库存扣减成功”主题
-│   │   ├── handler.py      # 事件处理器，路由到对应Agent
-│   │   └── schemas.py      # 事件数据模型（Pydantic）
+│   │   ├── consumer.py         # 订阅Kafka主题
+│   │   ├── decoder.py          # 事件解码器
+│   │   ├── schemas.py          # 事件数据模型（Pydantic）
+│   │   ├── handlers/           # 事件处理器
+│   │   │   ├── __init__.py
+│   │   └── protos/             # Protobuf定义
 │   │
-│   ├── knowledge/          # **RAG**
+│   ├── knowledge/              # RAG知识库
 │   │   ├── __init__.py
-│   │   ├── retriever.py    # 检索器
-│   │   ├── vector_store.py # 向量数据库客户端封装（如Chroma）
-│   │   └── documents/      # 存放知识库文档
-│   │       └── inventory_policy.md
+│   │   ├── embedding.py        # 嵌入模型
+│   │   ├── retriever.py        # 检索器
+│   │   ├── splitter.py         # 文本分割器
+│   │   ├── vector_store.py     # 向量数据库客户端封装
+│   │   ├── docs/               # 知识库文档
+│   │   │   ├── security.md
+│   │   │   └── 智能采购规则文档.md
+│   │   └── schemas/            # 知识库数据模型
+│   │       └── __init__.py
 │   │
-│   └── utils/              # 通用工具函数
-│       ├── __init__.py
-│       ├── api_client.py   # 封装Go微服务的HTTP调用
-│       ├── logger.py       # 日志配置
-│       └── formatters.py   # 数据格式化
+│   ├── repository/             # 数据访问层
+│   │
+│   ├── service/                # 业务逻辑层
+│   │
+│   ├── storage/                # 存储层
+│   │   ├── __init__.py
+│   │   ├── mysql.py            # MySQL连接
+│   │   ├── redis.py            # Redis连接
+│   │   └── session_store.py    # 会话存储
+│   │
+│   ├── tools/                  # 工具
+│   │
+│   └── utils/                  # 通用工具函数
 │
-├── tests/                  # 单元测试和集成测试
+├── tests/                      # 单元测试和集成测试
+│   └── integration/            # 集成测试
 │
-├── scripts/                # 实用脚本
-│   ├── bootstrap.sh        # 环境初始化脚本
-│   ├── start_agent.sh      # 启动Agent服务
-│   └── load_test_data.py   # 加载测试数据
+├── scripts/                    # 实用脚本
+├── Dockerfile                  # Docker构建文件
+├── docker-compose.yml          # Docker Compose配置
+├── pyproject.toml              # 项目依赖配置
+└── uv.lock                    # 依赖锁文件
 ```
 
 ## 技术选型
@@ -70,45 +93,14 @@
 | MySQL      | 8.0.45  | 数据库                |
 | Apisix     | 3.4.1   | API网关              |
 | harbor     | 1.8.6   | docker私有仓库         |
-| python     | 3.13.9  | 智能体开发语言            |
+| python     | 3.13.9  | 开发语言               |
 | Consul     | 1.7.3   | 服务注册/发现            |
 | Github     | -       | 代码托管和项目管理          |
 | Kafka      | 3.0.1   | 收集Apisix日志、项目的核心组件 |
-| langchain  | 1.2.12  | 智能体开发框架            |
+| langchain  | 1.2.12  | 开发框架               |
+| Milvus     | 2.6.13  | 向量数据库              |
+
 
 ## 声明
 - 请勿未经允许使用Releases的产物及源码用于商业用途，若需合作请发送邮件到zhanshen02154@gmail.com联系作者本人。
 - 严禁将代码及产物（含附属品）用于非法活动如赌博、诈骗、洗钱等，一经发现将追究法律责任！
-
-## 前端流式传输信息
-```json
-{
-   "type": "chunk",
-  "content": "消息内容",
-  "message_id": "消息ID",
-  "full_content": "完整消息内容"
-}
-```
-
-### 前端流式传输回调函数
-```javascript
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        console.log('SSE收到数据:', data)
-        
-        if (data.type === 'chunk') {
-          onChunk(data.content, data.message_id, data.full_content)
-        } else if (data.type === 'done') {
-          onComplete(data.full_content, data.message_id)
-          eventSource.close()
-        } else if (data.type === 'error') {
-          onError(data.message)
-          eventSource.close()
-        }
-      } catch (error) {
-        console.error('解析SSE数据失败:', error)
-        onError('解析服务器响应失败')
-      }
-    }
-```

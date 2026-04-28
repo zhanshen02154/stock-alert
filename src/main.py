@@ -1,11 +1,13 @@
 import logging
 import os
 from contextlib import asynccontextmanager
+
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.checkpoint.redis import AsyncRedisSaver
+
 from config import ConsulConfigLoader
 from config.prompts import load_prompt_from_yaml
 from config.settings import GLOBAL_CONFIG
@@ -15,14 +17,14 @@ from src.api.routers.chat import router as chat_router
 from src.api.routers.health import router as health_router
 from src.api.routers.user import routers as user_router
 from src.core.llm import get_qwen_llm_client
+from src.knowledge.vector_store import load_milvus_manager, close_milvus_manager
 from src.storage.mysql import create_mysql_session_store
 from src.storage.redis import create_redis_client
 from src.utils.api_client import ApiClientManager
 
 # 配置日志
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -49,7 +51,9 @@ async def lifespan(fastapp: FastAPI):
         conf = GLOBAL_CONFIG.get("checkpointer", {})
         checkpointer_type = conf.get("type", "redis")
         if checkpointer_type == "redis":
-            checkpointer = AsyncRedisSaver(redis_client=fastapp.state.redis_client.get_client())
+            checkpointer = AsyncRedisSaver(
+                redis_client=fastapp.state.redis_client.get_client()
+            )
             await checkpointer.setup()
             fastapp.state.checkpointer = checkpointer
         else:
@@ -57,34 +61,53 @@ async def lifespan(fastapp: FastAPI):
 
         # 创建大模型
         fastapp.state.qwen_llm = get_qwen_llm_client()
+
+        # 初始化向量数据库
+        load_milvus_manager()
+
         logger.info("应用程序已经启动")
 
         yield
     finally:
         logger.info("应用关闭中")
         # 关闭MySQL连接
-        if hasattr(fastapp.state, 'mysql_store'):
+        if hasattr(fastapp.state, "mysql_store"):
             fastapp.state.mysql_store.close()
 
         # 关闭Redis连接
-        if hasattr(fastapp.state, 'redis_client'):
+        if hasattr(fastapp.state, "redis_client"):
             await fastapp.state.redis_client.aclose()
 
         from src.api.dependencies import get_inventory_agent
         from src.agents.inventory_agent import InventoryAgent
-        cached_agent: InventoryAgent | None = get_inventory_agent.cache.get((), None) if hasattr(get_inventory_agent,
-                                                                                                 'cache') else None
+
+        cached_agent: InventoryAgent | None = (
+            get_inventory_agent.cache.get((), None)
+            if hasattr(get_inventory_agent, "cache")
+            else None
+        )
         if cached_agent:
             await cached_agent.close()
-
         await ApiClientManager.close_all()
         logger.info("关闭API客户端")
+
+        close_milvus_manager()
+
         logger.info("应用已关闭")
 
 
 app = FastAPI(title="智能库存Agent", lifespan=lifespan, root_path="/api/v1")
 app.add_middleware(AuthMiddleware)
-app.add_middleware(CORSMiddleware, allow_origins=["http://47.113.218.195:30023", "http://127.0.0.1:3000", "http://47.113.218.195:32251"], allow_methods=["OPTIONS", "GET", "POST", "PUT", "DELETE"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://47.113.218.195:30023",
+        "http://localhost:3000",
+        "http://47.113.218.195:32251",
+    ],
+    allow_methods=["OPTIONS", "GET", "POST", "PUT", "DELETE"],
+    allow_headers=["*"],
+)
 
 app.include_router(router=router)
 app.include_router(router=health_router)
@@ -97,5 +120,5 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=8000,
         log_level="info",
-        timeout_graceful_shutdown=15
+        timeout_graceful_shutdown=15,
     )
