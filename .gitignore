@@ -8,6 +8,7 @@ wheels/
 .vscode/
 .pytest_cache/
 .claude/
+.codebuddy/
 
 # Virtual environments
 .venv
