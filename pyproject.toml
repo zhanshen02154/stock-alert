@@ -1,6 +1,6 @@
 [project]
 name = "stock-alert"
-version = "0.1.0"
+version = "2.0.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -23,8 +23,16 @@ dependencies = [
     "fastapi>=0.135.3",
     "uvicorn[standard]>=0.43.0",
     "python-multipart>=0.0.24",
+    "langchain-text-splitters>=1.1.2",
+    "langchain_milvus>=0.3.3",
+    "pymilvus==2.6.9"
 ]
 
 [[tool.uv.index]]
 url = "https://pypi.tuna.tsinghua.edu.cn/simple"
 default = true
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]

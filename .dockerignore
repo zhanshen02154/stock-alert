@@ -8,6 +8,9 @@ tests/
 .idea/
 *.swp
 *.swo
+.codebuddy/
+.claude/
+
 
 # 排除文档
 docs/

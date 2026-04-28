@@ -1,14 +1,13 @@
 from functools import lru_cache
 from typing import Any
+
 from fastapi import Depends, Request
-from langchain_core.language_models import BaseChatModel
 from langgraph.checkpoint.base import BaseCheckpointSaver
-from langgraph.checkpoint.memory import InMemorySaver
-from langgraph.checkpoint.redis import AsyncRedisSaver
 from redis.asyncio import Redis
+
 from config.settings import GLOBAL_CONFIG, get_agent_config
 from src.agents.inventory_agent import InventoryAgent
-from src.core.llm.llm import get_qwen_llm_client
+from src.knowledge.vector_store import MilvusManager
 from src.repository.session import SessionRepository
 from src.repository.user import UserRepository
 from src.service.chat import ChatService
@@ -41,12 +40,18 @@ def get_mysql_store_from_app(request: Request):
 
 
 @lru_cache(maxsize=1)
-def get_session_repo(mysql_store = Depends(get_mysql_store_from_app)) -> SessionRepository:
+def get_session_repo(
+    mysql_store=Depends(get_mysql_store_from_app),
+) -> SessionRepository:
     return SessionRepository(session_store=mysql_store)
+
 
 def get_checkpointer(request: Request) -> BaseCheckpointSaver:
     """获取checkpointer (从app.state)"""
-    if not hasattr(request.app.state, 'checkpointer') or request.app.state.checkpointer is None:
+    if (
+        not hasattr(request.app.state, "checkpointer")
+        or request.app.state.checkpointer is None
+    ):
         raise RuntimeError("Checkpointer未在应用启动时初始化")
     return request.app.state.checkpointer
 
@@ -63,29 +68,46 @@ def get_inventory_agent(
     :return: InventoryAgent
     """
     conf = get_inventory_config()
-    agent = InventoryAgent(agent_name="inventory", llm=request.app.state.qwen_llm, checkpointer=checkpointer, conf=conf)
+    agent = InventoryAgent(
+        agent_name="inventory",
+        llm=request.app.state.qwen_llm,
+        checkpointer=checkpointer,
+        conf=conf,
+    )
     agent.start()
     return agent
 
+
 @lru_cache(maxsize=1)
-def get_user_repo(mysql_store = Depends(get_mysql_store_from_app)) -> UserRepository:
+def get_user_repo(mysql_store=Depends(get_mysql_store_from_app)) -> UserRepository:
     return UserRepository(session_store=mysql_store)
 
 
 @lru_cache(maxsize=1)
 def get_user_service(
     user_repo: UserRepository = Depends(get_user_repo),
-    redis_client: Redis = Depends(get_redis_client_from_app)
+    redis_client: Redis = Depends(get_redis_client_from_app),
 ) -> UserService:
     return UserService(user_repo=user_repo, redis_client=redis_client)
 
 
 @lru_cache(maxsize=1)
-def get_session_service(session_repo: SessionRepository = Depends(get_session_repo), agent: InventoryAgent = Depends(get_inventory_agent)) -> SessionService:
+def get_session_service(
+    session_repo: SessionRepository = Depends(get_session_repo),
+    agent: InventoryAgent = Depends(get_inventory_agent),
+) -> SessionService:
     return SessionService(session_repo=session_repo, agent=agent)
 
 
 @lru_cache(maxsize=1)
-def get_chat_service(session_repo: SessionRepository = Depends(get_session_repo), agent: InventoryAgent = Depends(get_inventory_agent)) -> ChatService:
+def get_milvus_manager(req: Request) -> MilvusManager:
+    return req.state.vector_store
+
+
+@lru_cache(maxsize=1)
+def get_chat_service(
+    session_repo: SessionRepository = Depends(get_session_repo),
+    agent: InventoryAgent = Depends(get_inventory_agent),
+) -> ChatService:
     """获取聊天服务"""
     return ChatService(session_repo=session_repo, agent=agent)
