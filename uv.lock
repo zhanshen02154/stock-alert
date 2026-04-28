@@ -964,7 +964,7 @@ wheels = [
 
 [[package]]
 name = "pymilvus"
-version = "2.6.12"
+version = "2.6.9"
 source = { registry = "https://pypi.tuna.tsinghua.edu.cn/simple" }
 dependencies = [
     { name = "cachetools" },
@@ -973,12 +973,11 @@ dependencies = [
     { name = "pandas" },
     { name = "protobuf" },
     { name = "python-dotenv" },
-    { name = "requests" },
     { name = "setuptools" },
 ]
-sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/2c/d7/c5d1381248a33975ccc864a0f980f93270ecc35354de8646c8a16443cccb/pymilvus-2.6.12.tar.gz", hash = "sha256:8323e990dc305e607fef525498eb779e42940a69e0691dde009cd02d48845f7a", size = 1584521, upload-time = "2026-04-09T07:49:11.374Z" }
+sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/94/0c/92adff800a04cd3e9b3f17c06fa972c8d590846b1e0bac0ccf39e054b596/pymilvus-2.6.9.tar.gz", hash = "sha256:c53a3d84ff15814e251be13edda70a98a1c8a6090d7597a908387cbb94a9504a", size = 1493560, upload-time = "2026-02-10T11:01:27.415Z" }
 wheels = [
-    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/ce/5d/44b0fa94c91503381e6f12298277f84f8e7b0bb00715ab89fc273c4d681e/pymilvus-2.6.12-py3-none-any.whl", hash = "sha256:69051b8b62712f157b2b50aeb7bde7fd7cdb5940aac0122094eb3cd58bc20f0d", size = 315183, upload-time = "2026-04-09T07:49:09.013Z" },
+    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/6a/56/ab7f0a5aba6fc06dc210a059d6f6d2ee1f3371d40e2b4366a409576554b8/pymilvus-2.6.9-py3-none-any.whl", hash = "sha256:3e14e8072f6429dcd79d52a24dc021c594cb80841ddd76cb974bc539d1f4cdda", size = 301225, upload-time = "2026-02-10T11:01:25.796Z" },
 ]
 
 [[package]]
@@ -1278,6 +1277,7 @@ dependencies = [
     { name = "protobuf" },
     { name = "pydantic" },
     { name = "pyjwt" },
+    { name = "pymilvus" },
     { name = "pymysql" },
     { name = "python-consul" },
     { name = "python-dotenv" },
@@ -1307,6 +1307,7 @@ requires-dist = [
     { name = "protobuf", specifier = ">=7.34.0" },
     { name = "pydantic", specifier = ">=2.5.0" },
     { name = "pyjwt", specifier = ">=2.8.0" },
+    { name = "pymilvus", specifier = "==2.6.9" },
     { name = "pymysql", specifier = ">=1.1.0" },
     { name = "python-consul", specifier = ">=1.1.0" },
     { name = "python-dotenv" },
