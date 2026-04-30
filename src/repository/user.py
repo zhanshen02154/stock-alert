@@ -1,21 +1,22 @@
-from typing import Optional, Dict, Any
 from datetime import datetime
+from typing import Optional, Dict, Any
 
 from src.storage import MySQLSessionStore
 
 
 class UserRepository:
     """用户仓库 - 同步实现"""
+
     def __init__(self, session_store: MySQLSessionStore):
         self.session_store = session_store
-    
+
     def find_by_username(self, username: str) -> Optional[Dict[str, Any]]:
         """
         根据用户名查询用户
-        
+
         Args:
             username: 用户名
-            
+
         Returns:
             用户信息字典，不存在返回None
         """
@@ -33,20 +34,20 @@ class UserRepository:
                         "last_login_time": result[3],
                         "is_login": result[4],
                         "created_at": result[5],
-                        "updated_at": result[6]
+                        "updated_at": result[6],
                     }
                 return None
         finally:
             conn.close()
-    
+
     def update_last_login_time(self, user_id: int, login_time: datetime) -> bool:
         """
         更新用户最后登录时间并标记为已登录
-        
+
         Args:
             user_id: 用户ID
             login_time: 登录时间
-            
+
         Returns:
             更新成功返回True，否则返回False
         """
@@ -62,7 +63,7 @@ class UserRepository:
             raise e
         finally:
             conn.close()
-    
+
     def find_by_id(self, user_id: int) -> Optional[Dict[str, Any]]:
         """
         根据用户ID查询用户
@@ -83,13 +84,13 @@ class UserRepository:
                     return {
                         "id": result[0],
                         "username": result[1],
-                        "is_login": result[2]
+                        "is_login": result[2],
                     }
                 return None
         finally:
             conn.close()
 
-    def update_logout_status(self, user_id: int) -> bool:
+    def update_logout_status(self, user_id: int) -> bool | None:
         """
         更新用户退出登录状态
 
@@ -101,6 +102,7 @@ class UserRepository:
         """
         conn = self.session_store.get_connection()
         try:
+            conn.begin()
             with conn.cursor() as cursor:
                 sql = "UPDATE users SET is_login = 1, updated_at = %s WHERE id = %s"
                 cursor.execute(sql, (datetime.now(), user_id))
