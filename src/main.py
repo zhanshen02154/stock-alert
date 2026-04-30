@@ -60,6 +60,18 @@ async def lifespan(fastapp: FastAPI):
 
         fastapp.state.qwen_llm = get_qwen_llm_client()
 
+        from src.agents.inventory_agent import InventoryAgent
+        from src.api.dependencies import get_inventory_config
+
+        agent_conf = get_inventory_config()
+        fastapp.state.inventory_agent = InventoryAgent(
+            agent_name="inventory",
+            llm=fastapp.state.qwen_llm,
+            checkpointer=fastapp.state.checkpointer,
+            conf=agent_conf,
+        )
+        fastapp.state.inventory_agent.start()
+
         load_milvus_manager()
 
         logger.info("应用程序已经启动")
@@ -73,11 +85,9 @@ async def lifespan(fastapp: FastAPI):
         if hasattr(fastapp.state, "redis_client"):
             await fastapp.state.redis_client.aclose()
 
-        from src.api.dependencies import get_inventory_agent
-        from src.agents.inventory_agent import InventoryAgent
+        if hasattr(fastapp.state, "inventory_agent"):
+            await fastapp.state.inventory_agent.close()
 
-        if hasattr(get_inventory_agent, "cache_clear"):
-            get_inventory_agent.cache_clear()
         await ApiClientManager.close_all()
         logger.info("关闭API客户端")
 
