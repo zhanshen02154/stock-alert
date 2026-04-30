@@ -91,7 +91,7 @@ async def lifespan(fastapp: FastAPI):
         await ApiClientManager.close_all()
         logger.info("关闭API客户端")
 
-        close_milvus_manager()
+        await close_milvus_manager()
 
         logger.info("应用已关闭")
 
@@ -101,7 +101,7 @@ app.add_middleware(AuthMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://47.113.218.195:30023",
+        "http://47.120.42.40:30023",
         "http://localhost:3000",
         "http://47.113.218.195:32251",
     ],

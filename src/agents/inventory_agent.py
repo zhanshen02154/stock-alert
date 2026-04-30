@@ -7,7 +7,7 @@ from langchain_core.documents import Document
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import HumanMessagePromptTemplate, PromptTemplate
+from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableConfig, RunnablePassthrough, RunnableLambda
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.redis import AsyncRedisSaver
@@ -53,8 +53,14 @@ class InventoryAgent(BaseAgent):
         :param message: 用户消息
         :return: 流式生成 {"type": "text", "text": ...}
         """
+        if not message or not message.strip():
+            logger.warning("RAG查询消息为空，跳过检索")
+            yield {"type": "text", "text": "请输入有效的查询内容"}
+            return
+
+        BaseKnowledgeRetriever.load_retriever()
         retriever = BaseKnowledgeRetriever.get_retriever(
-            collection_name="smart_procurement_rules"
+            "smart_procurement_rules"
         )
         prompt = PromptTemplate.from_template(template=SYSTEM_PROMPTS.get("rag_system"))
         self.__rag_chain = (
@@ -144,16 +150,18 @@ class InventoryAgent(BaseAgent):
 
     async def summary(self, message: str) -> str:
         """总结首轮对话"""
-        sys_prompt = """
-        请为以下对话内容生成不超过30字的标题: 
-        
-        {message}
-        """
-        template = HumanMessagePromptTemplate(prompt=sys_prompt).format(message=message)
-        resp = await self.llm.ainvoke(
-            {"messages": [template, SystemMessage(content=self.__summary_prompt)]}
-        )
-        return resp["messages"][-1].content
+        sys_prompt = "请为以下对话内容生成不超过30字的标题，只输出标题本身，不要附加任何其他内容。"
+        try:
+            resp = await self.llm.ainvoke(
+                [
+                    SystemMessage(content=sys_prompt),
+                    HumanMessage(content=message),
+                ]
+            )
+            return resp.content
+        except Exception as e:
+            logger.error(f"生成总结标题失败: {e}")
+            return "新对话"
 
     def start(self):
         """启动"""

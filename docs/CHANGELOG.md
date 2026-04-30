@@ -1,6 +1,23 @@
 
+<a name="v2.1.0"></a>
+## [v2.1.0](https://github.com/zhanshen02154/sock-alert/compare/v2.0.0...v2.1.0) (2026-04-28)
+
+### Feat
+
+* 新增RAG信息检索查询 ([#28](https://github.com/zhanshen02154/sock-alert/issues/28))
+* 添加文本清洗工具函数
+
+### Fix
+
+* 将 pymilvus 版本降级至 2.6.9
+
+### Refactor
+
+* 移除无用的JWT工具类
+
+
 <a name="v2.0.0"></a>
-## [v2.0.0](https://github.com/zhanshen02154/sock-alert/compare/v1.0.0...v2.0.0) (2026-04-06)
+## [v2.0.0](https://github.com/zhanshen02154/sock-alert/compare/v1.0.0...v2.0.0) (2026-04-07)
 
 ### Feat
 
@@ -16,11 +33,13 @@
 
 * 修复跨域请求
 * 新增path日志
+* 修复跨域请求问题
 
 ### Refactor
 
 * 重构Agent运行机制
 * 重构agent
+* 修改工具状态枚举
 * 修改工具状态枚举
 * 修改查询库存工具
 * 重构存储层
@@ -30,31 +49,7 @@
 
 
 <a name="v1.0.0"></a>
-## v1.0.0 (2026-03-27)
-
-### Build
-
-* 删除调试Dockerfile
-* 修改Dockerfile
-* 更新Dockerfile镜像源及文件权限配置
-
-### Chore
-
-* 添加 changelog 配置
-
-### Ci
-
-* 修改镜像源
-* 修改容器名称
-* 新增Dockerfile
-* 修改 Jenkinsfile
-* 添加 Jenkinsfile 和 .dockerignore 配置
-
-### Docs
-
-* 更新Python用途描述
-* 更新 README 模式
-* 修正自述文件
+## v1.0.0 (2026-03-30)
 
 ### Feat
 
