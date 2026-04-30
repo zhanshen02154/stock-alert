@@ -1,3 +1,24 @@
+<a name="v2.1.2"></a>
+## [v2.1.2](https://github.com/zhanshen02154/sock-alert/compare/v2.1.1...v2.1.2) (2026-04-30)
+
+### Feat
+
+* 支持混合检索并优化错误处理 ([#35](https://github.com/zhanshen02154/sock-alert/issues/35))
+* 实现自动生成会话标题功能 ([#34](https://github.com/zhanshen02154/sock-alert/issues/34))
+
+### Fix
+
+* 修复Agent资源泄漏问题
+* 修复多处资源泄漏问题 ([#37](https://github.com/zhanshen02154/sock-alert/issues/37))
+
+
+<a name="v2.1.1"></a>
+## [v2.1.1](https://github.com/zhanshen02154/sock-alert/compare/v2.1.0...v2.1.1) (2026-04-28)
+
+### Fix
+
+* 更新CORS允许的源地址
+
 
 <a name="v2.1.0"></a>
 ## [v2.1.0](https://github.com/zhanshen02154/sock-alert/compare/v2.0.0...v2.1.0) (2026-04-28)
@@ -65,4 +86,3 @@
 ### Refactor
 
 * 统一注册工具
-
