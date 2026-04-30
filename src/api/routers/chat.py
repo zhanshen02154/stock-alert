@@ -78,8 +78,8 @@ async def add_message(req: Request, params: Annotated[ChatRequest, Form()], chat
 async def update(req: Request, params: SessionUpdateRequest, session_service: SessionService = Depends(get_session_service)):
     try:
         user_id: int = req.state.user_id
-        session_service.update(session_id=params.chat_id, title=params.chat_name, user_id=user_id)
-        return success(data={"chat_id": params.chat_id, "chat_name": params.chat_name})
+        title = await session_service.update(session_id=params.chat_id, user_id=user_id)
+        return success(data={"chat_id": params.chat_id, "chat_name": title})
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
