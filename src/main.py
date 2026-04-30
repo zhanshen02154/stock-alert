@@ -53,8 +53,8 @@ async def lifespan(fastapp: FastAPI):
             checkpointer = AsyncRedisSaver(
                 redis_client=fastapp.state.redis_client.get_client(),
                 ttl={
-                    "default_ttl": 604800,
-                    "refresh_on_read": True,
+                    "default_ttl": conf.get("ttl", {}).get("default_ttl", 604800),
+                    "refresh_on_read": conf.get("ttl", {}).get("refresh_on_read", True),
                 },
             )
             await checkpointer.setup()
