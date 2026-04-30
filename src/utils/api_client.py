@@ -30,7 +30,9 @@ class ApiClient:
         """关闭所有客户端连接"""
         if self.__sync_client:
             self.__sync_client.close()
+            self.__sync_client = None
         if self.__async_client:
             await self.__async_client.aclose()
+            self.__async_client = None
 
 ApiClientManager = ApiClient()

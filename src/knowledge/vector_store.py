@@ -75,8 +75,10 @@ class MilvusManager:
         """关闭所有缓存的 Milvus 实例"""
         if self._instances:
             for k in self._instances:
-                self._instances[k].client.close()
-                await self._instances[k].aclient.close()
+                instance = self._instances[k]
+                instance.client.close()
+                if instance.aclient is not None:
+                    await instance.aclient.close()
         self._instances.clear()
         logger.info("Milvus管理器已关闭")
 

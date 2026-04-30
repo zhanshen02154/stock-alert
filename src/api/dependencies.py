@@ -56,26 +56,11 @@ def get_checkpointer(request: Request) -> BaseCheckpointSaver:
     return request.app.state.checkpointer
 
 
-@lru_cache(maxsize=1)
-def get_inventory_agent(
-    request: Request,
-    checkpointer: BaseCheckpointSaver = Depends(get_checkpointer),
-) -> InventoryAgent:
-    """
-    获取库存Agent
-    :param request:
-    :param checkpointer: 检查点
-    :return: InventoryAgent
-    """
-    conf = get_inventory_config()
-    agent = InventoryAgent(
-        agent_name="inventory",
-        llm=request.app.state.qwen_llm,
-        checkpointer=checkpointer,
-        conf=conf,
-    )
-    agent.start()
-    return agent
+def get_inventory_agent(request: Request) -> InventoryAgent:
+    """获取库存Agent (从app.state)"""
+    if not hasattr(request.app.state, "inventory_agent"):
+        raise RuntimeError("InventoryAgent未在应用启动时初始化")
+    return request.app.state.inventory_agent
 
 
 @lru_cache(maxsize=1)

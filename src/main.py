@@ -45,9 +45,8 @@ async def lifespan(fastapp: FastAPI):
 
         fastapp.state.mysql_store = create_mysql_session_store()
         fastapp.state.redis_client = create_redis_client()
-        await fastapp.state.redis_client.conn()  # 启动redis客户端
+        await fastapp.state.redis_client.conn()
 
-        # 创建checkpointer
         conf = GLOBAL_CONFIG.get("checkpointer", {})
         checkpointer_type = conf.get("type", "redis")
         if checkpointer_type == "redis":
@@ -59,10 +58,20 @@ async def lifespan(fastapp: FastAPI):
         else:
             fastapp.state.checkpointer = InMemorySaver()
 
-        # 创建大模型
         fastapp.state.qwen_llm = get_qwen_llm_client()
 
-        # 初始化向量数据库
+        from src.agents.inventory_agent import InventoryAgent
+        from src.api.dependencies import get_inventory_config
+
+        agent_conf = get_inventory_config()
+        fastapp.state.inventory_agent = InventoryAgent(
+            agent_name="inventory",
+            llm=fastapp.state.qwen_llm,
+            checkpointer=fastapp.state.checkpointer,
+            conf=agent_conf,
+        )
+        fastapp.state.inventory_agent.start()
+
         load_milvus_manager()
 
         logger.info("应用程序已经启动")
@@ -70,28 +79,23 @@ async def lifespan(fastapp: FastAPI):
         yield
     finally:
         logger.info("应用关闭中")
-        # 关闭MySQL连接
         if hasattr(fastapp.state, "mysql_store"):
             fastapp.state.mysql_store.close()
 
-        # 关闭Redis连接
         if hasattr(fastapp.state, "redis_client"):
             await fastapp.state.redis_client.aclose()
 
-        from src.api.dependencies import get_inventory_agent
-        from src.agents.inventory_agent import InventoryAgent
+        if hasattr(fastapp.state, "inventory_agent"):
+            await fastapp.state.inventory_agent.close()
 
-        cached_agent: InventoryAgent | None = (
-            get_inventory_agent.cache.get((), None)
-            if hasattr(get_inventory_agent, "cache")
-            else None
-        )
-        if cached_agent:
-            await cached_agent.close()
         await ApiClientManager.close_all()
         logger.info("关闭API客户端")
 
         await close_milvus_manager()
+
+        if hasattr(fastapp.state, "kafka_consumer"):
+            fastapp.state.kafka_consumer.stop()
+            fastapp.state.kafka_consumer.close()
 
         logger.info("应用已关闭")
 
