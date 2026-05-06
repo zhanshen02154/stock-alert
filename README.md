@@ -1,8 +1,7 @@
 # 库存智能助手
 
 ## 项目简介
-库存助手是一个可以用来操作库存系统的AI Agent，依托[商品服务](https://github.com/zhanshen02154/product)进行开发，进一步挖掘库存系统的价值，是[事件驱动微服务](https://github.com/zhanshen02154/go-micro-service)的
-附属产品。
+库存助手是一个可以用来操作库存系统的AI Agent，依托[商品服务](https://github.com/zhanshen02154/product)进行开发，进一步挖掘库存系统的价值，是[事件驱动微服务](https://github.com/zhanshen02154/go-micro-service)的 附属产品。
 
 ## 目录结构
 ```tree
@@ -100,6 +99,14 @@
 | langchain  | 1.2.12  | 开发框架               |
 | Milvus     | 2.6.13  | 向量数据库              |
 
+## 本地开发指南
+- 安装Docker（Windows/Linux/Mac均可）。
+- 将docker-compose-dev.yml复制到docker-compose.yml，并联系项目管理员获取环境变量写入到yml。
+- 编译docker镜像为stock-alert:local。
+- 运行命令
+```bash
+  docker-compose start
+```
 
 ## 声明
 - 请勿未经允许使用Releases的产物及源码用于商业用途，若需合作请发送邮件到zhanshen02154@gmail.com联系作者本人。
