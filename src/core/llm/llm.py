@@ -1,5 +1,6 @@
 import os
 
+from langchain_core.language_models import ModelProfile
 from langchain_openai import ChatOpenAI
 from langchain_qwq import ChatQwen
 
@@ -18,7 +19,8 @@ def get_qwen_llm_client() -> ChatQwen:
         temperature=conf.get("temperature", 0.1),
         timeout=conf.get("timeout", 60),
         max_retries=conf.get("max_retries", 3),
-        max_tokens=conf.get("max_tokens", 65535),
+        max_tokens=conf.get("max_tokens", 8192),
+        profile=ModelProfile(max_input_tokens=conf.get("max_tokens", 8192)),
         streaming=True,
     )
 
@@ -32,7 +34,8 @@ def get_openai_client() -> ChatOpenAI:
         base_url=os.getenv("OPENAI_API_BASE"),
         temperature=conf.get("temperature", 0.1),
         timeout=conf.get("timeout", 60),
-        max_tokens=conf.get("max_tokens", 65535),
+        max_tokens=conf.get("max_tokens", 8192),
         max_retries=conf.get("max_retries", 3),
+        profile=ModelProfile(max_input_tokens=conf.get("max_tokens", 8192)),
         streaming=True,
     )
