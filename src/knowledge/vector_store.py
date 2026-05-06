@@ -1,6 +1,7 @@
 import logging
-from typing import Any, Optional
+from typing import Any, Optional, List
 
+from langchain_core.documents import Document
 from langchain_milvus import Milvus, BM25BuiltInFunction
 from pymilvus.milvus_client import IndexParams
 
@@ -69,6 +70,21 @@ class MilvusManager:
             index_params=index_params,
             timeout=timeout,
             **kwargs,
+        )
+
+    def similarity_search(
+        self,
+        collection_name: str,
+        query: str,
+        k: int = 4,
+        param: Optional[dict | list[dict]] = None,
+        expr: Optional[str] = None,
+        timeout: Optional[float] = None,
+        **kwargs: Any,
+    ) -> List[Document]:
+        self.get_collection(collection_name=collection_name)
+        return self._instances[collection_name].similarity_search(
+            query=query, k=k, params=param, expr=expr, timeout=timeout, **kwargs
         )
 
     async def aclose(self):
