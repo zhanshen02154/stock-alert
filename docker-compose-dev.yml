@@ -1,0 +1,26 @@
+version: "3.5"
+services:
+    stock-alert:
+        container_name: stock-alert
+        user: root
+        environment:
+            CONSUL_HOST: <CONSUL_HOST>
+            CONSUL_PORT: <CONSUL_PORT>
+            MICROSERVICE_URL: <MICROSERVICE_URL>
+            DASHSCOPE_API_BASE: <DASHSCOPE_API_BASE>
+            DASHSCOPE_API_KEY: <DASHSCOPE_API_KEY>
+            JWT_SECRET_KEY: <JWT_SECRET_KEY>
+        privileged: true
+        restart: on-failure
+        image: stock-alert:local
+        ports:
+            - '8001:8000'
+        networks:
+            - 'microservice'
+        volumes:
+            - './src:/app/src'
+            - './config/prompts/system.yaml:/app/config/prompts/system.yaml'
+
+networks:
+    microservice:
+        external: true
