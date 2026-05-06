@@ -1,7 +1,7 @@
 import logging
 import os
 
-from langchain_community.embeddings import DashScopeEmbeddings
+from langchain_community.embeddings import DashScopeEmbeddings, OpenAIEmbeddings
 from langchain_core.embeddings import Embeddings
 
 logger = logging.getLogger(__name__)
