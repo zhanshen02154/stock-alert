@@ -58,20 +58,21 @@ class InventoryAgent(BaseAgent):
             yield {"type": "text", "text": "请输入有效的查询内容"}
             return
 
-        BaseKnowledgeRetriever.load_retriever()
-        retriever = BaseKnowledgeRetriever.get_retriever(
-            "smart_procurement_rules"
-        )
-        prompt = PromptTemplate.from_template(template=SYSTEM_PROMPTS.get("rag_system"))
-        self.__rag_chain = (
-            {
-                "context": retriever | RunnableLambda(format_context),
-                "question": RunnablePassthrough(),
-            }
-            | prompt
-            | self.llm
-            | StrOutputParser()
-        )
+        if not self.__rag_chain:
+            BaseKnowledgeRetriever.load_retriever()
+            retriever = BaseKnowledgeRetriever.get_retriever("smart_procurement_rules")
+            prompt = PromptTemplate.from_template(
+                template=SYSTEM_PROMPTS.get("rag_system")
+            )
+            self.__rag_chain = (
+                {
+                    "context": retriever | RunnableLambda(format_context),
+                    "question": RunnablePassthrough(),
+                }
+                | prompt
+                | self.llm
+                | StrOutputParser()
+            )
 
         try:
             async for chunk in self.__rag_chain.astream(message):
