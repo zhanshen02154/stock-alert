@@ -1,3 +1,38 @@
+<a name="v2.1.3"></a>
+## [v2.1.3](https://github.com/zhanshen02154/sock-alert/compare/v2.1.2...v2.1.3) (2026-05-06)
+
+### Feat
+
+* 新增相似度搜索
+* 检查点缓存时间从配置获取 ([#40](https://github.com/zhanshen02154/sock-alert/issues/40))
+* 新增检查点缓存时间 ([#40](https://github.com/zhanshen02154/sock-alert/issues/40))
+
+### Fix
+
+* 恢复max_input_tokens限制
+* 防止重复创建__rag_chain
+
+### Refactor
+
+* 重构分割器
+* 调整llm.py参数
+
+### Chore
+
+* 新增RAGAS依赖
+* 新增docker-compose配置
+* 更新忽略文件并添加开发环境docker配置
+
+### Docs
+
+* 新增本地开发指南
+* 新增claude.md
+
+### Style
+
+* 优化嵌入模型代码文件格式
+
+
 <a name="v2.1.2"></a>
 ## [v2.1.2](https://github.com/zhanshen02154/sock-alert/compare/v2.1.1...v2.1.2) (2026-04-30)
 
