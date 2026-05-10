@@ -9,6 +9,7 @@ wheels/
 .pytest_cache/
 .claude/
 .codebuddy/
+.trae/
 
 # Virtual environments
 .venv
