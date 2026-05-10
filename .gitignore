@@ -10,6 +10,7 @@ wheels/
 .claude/
 .codebuddy/
 .trae/
+sql/
 
 # Virtual environments
 .venv
