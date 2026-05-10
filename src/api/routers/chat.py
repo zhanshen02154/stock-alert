@@ -85,12 +85,17 @@ async def update(req: Request, params: SessionUpdateRequest, session_service: Se
 
 
 @router.get("/ai-response")
-async def get_ai_response(req: Annotated[ChatAiRequest, Query()], chat_svc: ChatService = Depends(get_chat_service)):
+async def get_ai_response(
+    request: Request,
+    params: Annotated[ChatAiRequest, Query()],
+    chat_svc: ChatService = Depends(get_chat_service),
+):
     """获取AI流式响应"""
+    user_id: int = request.state.user_id
 
     async def event_generator():
         try:
-            async for message in chat_svc.chat_astream(session_id=req.chat_id):
+            async for message in chat_svc.chat_astream(session_id=params.chat_id, user_id=user_id):
                 sse_event = ServerSentEvent(data=json.dumps(dataclasses.asdict(message)), event=message.type, retry=5000)
                 yield f"data: {sse_event.data}\n\n"
         except Exception as e:

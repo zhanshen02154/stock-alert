@@ -5,26 +5,27 @@ from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from langgraph.checkpoint.memory import InMemorySaver
-from langgraph.checkpoint.redis import AsyncRedisSaver
 
 from config import ConsulConfigLoader
-from config.prompts import load_prompt_from_yaml
-from config.settings import GLOBAL_CONFIG
+from config.prompts import load_prompt_from_yaml, load_agent_prompts_from_yaml
+from config.settings import get_graph_config
+from src import ToolRegistry
 from src.api.middleware import AuthMiddleware
 from src.api.routers.chat import router
 from src.api.routers.chat import router as chat_router
 from src.api.routers.health import router as health_router
 from src.api.routers.user import routers as user_router
-from src.core.llm import get_qwen_llm_client
+from src.graph import InventoryManagerGraph
 from src.knowledge.vector_store import load_milvus_manager, close_milvus_manager
+from src.memory.checkpointer import CheckpointerFactory
 from src.storage.mysql import create_mysql_session_store
 from src.storage.redis import create_redis_client
-from src.utils.api_client import ApiClientManager
+from src.utils.api_client import HttpClient
 
 # 配置日志
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -41,42 +42,29 @@ async def lifespan(fastapp: FastAPI):
         logger.info("配置加载完成")
 
         load_prompt_from_yaml(file_path="config/prompts/system.yaml")
+        load_agent_prompts_from_yaml()
         logger.info("系统提示词加载完成")
 
         fastapp.state.mysql_store = create_mysql_session_store()
         fastapp.state.redis_client = create_redis_client()
         await fastapp.state.redis_client.conn()
 
-        conf = GLOBAL_CONFIG.get("checkpointer", {})
-        checkpointer_type = conf.get("type", "redis")
-        if checkpointer_type == "redis":
-            checkpointer = AsyncRedisSaver(
-                redis_client=fastapp.state.redis_client.get_client(),
-                ttl={
-                    "default_ttl": conf.get("ttl", {}).get("default_ttl", 604800),
-                    "refresh_on_read": conf.get("ttl", {}).get("refresh_on_read", True),
-                },
-            )
-            await checkpointer.setup()
-            fastapp.state.checkpointer = checkpointer
-        else:
-            fastapp.state.checkpointer = InMemorySaver()
+        # 注册所有工具
+        ToolRegistry.init_tools()
 
-        fastapp.state.qwen_llm = get_qwen_llm_client()
-
-        from src.agents.inventory_agent import InventoryAgent
-        from src.api.dependencies import get_inventory_config
-
-        agent_conf = get_inventory_config()
-        fastapp.state.inventory_agent = InventoryAgent(
-            agent_name="inventory",
-            llm=fastapp.state.qwen_llm,
-            checkpointer=fastapp.state.checkpointer,
-            conf=agent_conf,
+        # 注册检查点
+        await CheckpointerFactory.start(
+            redis_client=fastapp.state.redis_client.get_client()
         )
-        fastapp.state.inventory_agent.start()
 
+        # 启动milvus
         load_milvus_manager()
+
+        # 启动LangGraph应用
+        fastapp.state.inventory_graph = InventoryManagerGraph(
+            debug=False, config=get_graph_config(), callbacks=[]
+        )
+        fastapp.state.inventory_graph.setup_graph()
 
         logger.info("应用程序已经启动")
 
@@ -89,17 +77,19 @@ async def lifespan(fastapp: FastAPI):
         if hasattr(fastapp.state, "redis_client"):
             await fastapp.state.redis_client.aclose()
 
-        if hasattr(fastapp.state, "inventory_agent"):
-            await fastapp.state.inventory_agent.close()
-
-        await ApiClientManager.close_all()
-        logger.info("关闭API客户端")
+        await HttpClient.close_all()
 
         await close_milvus_manager()
+
+        # 关闭工具
+        ToolRegistry.cleanup()
 
         if hasattr(fastapp.state, "kafka_consumer"):
             fastapp.state.kafka_consumer.stop()
             fastapp.state.kafka_consumer.close()
+
+        if hasattr(fastapp.state, "inventory_graph"):
+            await fastapp.state.inventory_graph.aclose()
 
         logger.info("应用已关闭")
 
