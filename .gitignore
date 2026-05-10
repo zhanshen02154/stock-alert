@@ -16,3 +16,5 @@ sql/
 .venv
 .idea/
 cli/
+
+docker-compose.yml
