@@ -14,7 +14,7 @@ from src.tools.registry import ToolRegistry
 
 def create_data_query_agent(llm: BaseChatModel):
     """
-    创建数据查询Agent（使用LCEL链式调用）
+    创建数据查询Agent
     :param llm: 基础语言模型
     :return: 数据查询节点函数
     """
@@ -52,6 +52,7 @@ def create_data_query_agent(llm: BaseChatModel):
         return Command(
             update={
                 "messages": [AIMessage(content=result["messages"][-1].content)],
+                "query_result": result["messages"][-1].content,
             },
             goto=AgentType.SUPERVISOR,
         )
