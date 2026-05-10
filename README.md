@@ -30,7 +30,7 @@
 │   │   └── protos/             # Protobuf定义
 │   ├── graph/                  # LangGraph工作流
 │   ├── knowledge/              # RAG知识库
-│   ├── memory/                 # 内存管理
+│   ├── memory/                 # 记忆管理
 │   ├── repository/             # 数据访问层
 │   ├── service/                # 业务逻辑层
 │   ├── storage/                # 存储层
