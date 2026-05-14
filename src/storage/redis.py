@@ -1,6 +1,9 @@
 import logging
 from typing import Any
+
+from langchain_community.cache import AsyncRedisCache
 from redis.asyncio import Redis
+
 from config.settings import get_storage_config
 
 logger = logging.getLogger(__name__)
@@ -8,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 class RedisClient:
     """Redis缓存客户端"""
+
     __client: Redis | None = None
     __config: dict[str, Any] = {}
 
@@ -19,11 +23,17 @@ class RedisClient:
         try:
             if self.__client is None:
                 password = self.__config.get("password", "")
-                self.__client = Redis(host=self.__config.get("host", "localhost"), port=self.__config.get("port", 6379),
-                                      password=password, db=self.__config.get("db", 0),
-                                      max_connections=self.__config.get("max_connections", 30),
-                                      health_check_interval=self.__config.get("health_check_interval", 15),
-                                      decode_responses=True)
+                self.__client = Redis(
+                    host=self.__config.get("host", "localhost"),
+                    port=self.__config.get("port", 6379),
+                    password=password,
+                    db=self.__config.get("db", 0),
+                    max_connections=self.__config.get("max_connections", 30),
+                    health_check_interval=self.__config.get(
+                        "health_check_interval", 15
+                    ),
+                    decode_responses=True,
+                )
                 if password:
                     await self.__client.auth(password=password)
                 logger.info("Redis连接成功")
@@ -49,6 +59,10 @@ class RedisClient:
         return self.__client
 
     def ping(self):
+        """
+        检查连接
+        :return:
+        """
         return self.__client.ping()
 
     async def aget(self, key: str) -> str:
@@ -60,3 +74,17 @@ def create_redis_client() -> RedisClient:
     """创建Redis客户端"""
     conf = get_storage_config("redis")
     return RedisClient(conf)
+
+
+def create_async_redis_cache() -> AsyncRedisCache:
+    conf = get_storage_config("redis")
+    return AsyncRedisCache(
+        redis_=Redis(
+            host=conf.get("host", "localhost"),
+            port=conf.get("port", 6379),
+            password=conf.get("password", ""),
+            db=conf.get("db", 0),
+            max_connections=conf.get("max_connections", 30),
+            health_check_interval=conf.get("health_check_interval", 15),
+        )
+    )

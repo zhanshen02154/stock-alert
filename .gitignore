@@ -9,8 +9,12 @@ wheels/
 .pytest_cache/
 .claude/
 .codebuddy/
+.trae/
+sql/
 
 # Virtual environments
 .venv
 .idea/
 cli/
+
+docker-compose.yml

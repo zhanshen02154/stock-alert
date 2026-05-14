@@ -186,6 +186,9 @@ class SessionRepository:
             conn.begin()
             with conn.cursor() as cur:
                 cur.execute(
+                    "DELETE FROM chat_sessions WHERE session_id = %s", (session_id,)
+                )
+                cur.execute(
                     "DELETE FROM chat_messages WHERE session_id = %s", (session_id,)
                 )
             conn.commit()
@@ -199,11 +202,13 @@ class SessionRepository:
     ) -> None:
         """更新会话的metadata"""
         with self.session_store.get_connection() as conn:
+            conn.begin()
             with conn.cursor() as cur:
                 cur.execute(
                     "UPDATE chat_sessions SET metadata = %s WHERE session_id = %s",
                     (json.dumps(metadata), session_id),
                 )
+            conn.commit()
         logger.debug(f"更新会话metadata: {session_id}")
 
     def update_session_title(self, session_id: str, title: str) -> bool:

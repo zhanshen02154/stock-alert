@@ -40,3 +40,12 @@ def get_storage_config(key: str) -> dict[str, Any]:
     :return: 字典
     """
     return GLOBAL_CONFIG.get("storage", {}).get(key, {})
+
+
+def get_checkpointer_config(key: str = "checkpointer") -> dict[str, Any]:
+    return GLOBAL_CONFIG.get(key, {})
+
+
+def get_graph_config() -> dict[str, Any]:
+    """获取图配置"""
+    return GLOBAL_CONFIG.get("graph", {})

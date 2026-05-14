@@ -3,7 +3,7 @@ import uuid
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
-from src.agents.inventory_agent import InventoryAgent
+from src.graph.inventory_manager import InventoryManagerGraph
 from src.repository.session import SessionRepository
 from src.utils.plain_text import sanitize_text
 
@@ -21,7 +21,7 @@ class SSEMessage:
 class ChatService:
     def __init__(
         self,
-        agent: InventoryAgent,
+        agent: InventoryManagerGraph,
         session_repo: SessionRepository,
     ):
         self.__agent = agent
@@ -38,10 +38,13 @@ class ChatService:
         )
         return msg_id
 
-    async def chat_astream(self, session_id: str) -> AsyncGenerator[SSEMessage]:
+    async def chat_astream(
+        self, session_id: str, user_id: int
+    ) -> AsyncGenerator[SSEMessage]:
         """
         异步流式聊天
         :param session_id: 会话ID
+        :param user_id: 用户ID
         :return: 异步生成器
         """
         message_id = str(uuid.uuid4())
@@ -53,33 +56,17 @@ class ChatService:
             full_content = []
             user_message = sanitize_text(text=msg_info["content"])
 
-            async for chunk in self.__agent.rag_astream(message=user_message):
-                full_content.append(chunk["text"])
-                yield SSEMessage(
-                    type="chunk",
-                    content=chunk["text"],
-                    full_content="".join(full_content),
-                    message_id=message_id,
-                )
-            # if self.__agent._is_rag_query(user_message):
-            #     async for chunk in self.__agent.rag_astream(message=user_message):
-            #         full_content.append(chunk['text'])
-            #         yield SSEMessage(
-            #             type="chunk",
-            #             content=chunk['text'],
-            #             full_content="".join(full_content),
-            #             message_id=message_id,
-            #         )
-            # else:
-            #     async for chunk in self.__agent.astream(message=user_message, thread_id=session_id):
-            #         if chunk.get('type') == 'text':
-            #             full_content.append(chunk['text'])
-            #             yield SSEMessage(
-            #                 type="chunk",
-            #                 content=chunk['text'],
-            #                 full_content="".join(full_content),
-            #                 message_id=message_id,
-            #             )
+            async for chunk in self.__agent.astream(
+                message=user_message, thread_id=session_id, user_id=user_id
+            ):
+                if chunk.get("type") == "text":
+                    full_content.append(chunk["text"])
+                    yield SSEMessage(
+                        type="chunk",
+                        content=chunk["text"],
+                        full_content="".join(full_content),
+                        message_id=message_id,
+                    )
 
             final_msg = "".join(full_content)
             yield SSEMessage(
@@ -90,6 +77,7 @@ class ChatService:
             )
         except Exception as e:
             logger.error(e)
+            print(e)
             final_msg = str(e)
             yield SSEMessage(type="error", content=str(e), message_id=message_id)
         finally:
