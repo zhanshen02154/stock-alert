@@ -1,14 +1,14 @@
 from typing import Literal
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_core.prompts import MessagesPlaceholder, ChatPromptTemplate
+from langchain_core.messages import SystemMessage
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langgraph.constants import END
 from langgraph.types import Command
 
 from config.prompts.system import SYSTEM_PROMPTS
-from src.core.agent_state import AgentState, AgentType
-from src.core.schemas import Router
+from src.core.agent_state import AgentState
+from src.core.schemas import Router, AgentType
 
 
 def create_supervisor_agent(llm: BaseChatModel):
@@ -21,37 +21,46 @@ def create_supervisor_agent(llm: BaseChatModel):
 
     def supervisor_node(
         state: AgentState,
-    ) -> Command[Literal[END, AgentType.DATA_QUERY]]:
-        state_msgs = state.get("messages", [])
-        messages_for_prompt = list(state_msgs)
-        if len(messages_for_prompt) == 0:
-            human_msg = f"""
-            # 用户输入
-            {state.get("user_input")}
-            """
-            messages_for_prompt.append(HumanMessage(content=human_msg))
+    ) -> Command[
+        Literal[
+            END,
+            AgentType.DATA_QUERY,
+            AgentType.SUPERVISOR,
+            AgentType.KNOWLEDGE_SEARCH,
+            AgentType.INVENTORY_OPERATOR,
+            AgentType.SUPPLIER,
+        ]
+    ]:
+        print("supervisor node:", state)
         prompt = ChatPromptTemplate.from_messages(
             [
                 SystemMessage(content=SYSTEM_PROMPTS.get("supervisor")),
                 MessagesPlaceholder(variable_name="summarized_messages"),
+                MessagesPlaceholder(variable_name="messages"),
             ]
-            + messages_for_prompt
         )
         chain = prompt | structed_llm
         result = chain.invoke(
-            {"summarized_messages": state.get("summarized_messages", "无")}
+            {
+                "summarized_messages": state.get("summarized_messages"),
+                "messages": state.get("messages"),
+            }
         )
-        
+        print("supervisor result:", result)
+
         # 将 Router 对象转换为字典，避免序列化问题
         if isinstance(result, Router):
             result_dict = result.model_dump()
             goto = result_dict.get("next", "FINISH")
         else:
             goto = result.next if hasattr(result, "next") else "FINISH"
-            
+
         if goto == "FINISH":
             goto = END
 
-        return Command(update={"next": goto}, goto=goto)
+        return Command(
+            update={"next": goto, "task": result.task},
+            goto=goto,
+        )
 
     return supervisor_node

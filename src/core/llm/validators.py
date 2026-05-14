@@ -1,8 +1,4 @@
-_VALID_MODELS = {
-    "qwen": [
-        "qwen-plus",
-    ]
-}
+_VALID_MODELS = {"qwen": ["qwen-plus", "qwen3.6-plus", "qwen3.5-plus", "qwq-plus"]}
 
 
 def validate_model(model: str, provider: str) -> bool:

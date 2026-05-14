@@ -13,6 +13,7 @@ from src.repository.user import UserRepository
 from src.service.chat import ChatService
 from src.service.session import SessionService
 from src.service.user import UserService
+from src.storage.mysql import get_mysql_session_store
 
 
 def get_system_config():
@@ -32,16 +33,14 @@ def get_redis_client_from_app(request: Request) -> Redis:
     return client
 
 
-# 获取MySQL存储层 (从app.state)
-def get_mysql_store_from_app(request: Request):
-    if not request.app.state.mysql_store:
-        raise RuntimeError("MySQL存储层未在应用启动时初始化")
-    return request.app.state.mysql_store
+# 获取MySQL存储层 (从全局变量)
+def get_mysql_store_from_global():
+    return get_mysql_session_store()
 
 
 @lru_cache(maxsize=1)
 def get_session_repo(
-    mysql_store=Depends(get_mysql_store_from_app),
+    mysql_store=Depends(get_mysql_store_from_global),
 ) -> SessionRepository:
     return SessionRepository(session_store=mysql_store)
 
@@ -64,7 +63,7 @@ def get_inventory_graph(request: Request) -> InventoryManagerGraph:
 
 
 @lru_cache(maxsize=1)
-def get_user_repo(mysql_store=Depends(get_mysql_store_from_app)) -> UserRepository:
+def get_user_repo(mysql_store=Depends(get_mysql_store_from_global)) -> UserRepository:
     return UserRepository(session_store=mysql_store)
 
 

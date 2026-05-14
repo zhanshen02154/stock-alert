@@ -3,6 +3,7 @@ from typing import Optional
 
 from langchain_core.language_models import BaseChatModel
 from langchain_openai import ChatOpenAI
+from langchain_qwq import ChatQwen
 
 from src.core.llm.base_client import BaseLLMClient
 from src.core.llm.validators import validate_model
@@ -66,6 +67,12 @@ class OpenAIClient(BaseLLMClient):
 
         if self.provider == "openai":
             llm_kwargs["use_responses_api"] = True
+
+        if (
+            llm_kwargs["model"] == "qwen3.6-plus"
+            or llm_kwargs["model"] == "qwen3.5-plus"
+        ):
+            return ChatQwen(**llm_kwargs)
 
         return ChatOpenAI(**llm_kwargs)
 

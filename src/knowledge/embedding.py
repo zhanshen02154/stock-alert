@@ -1,7 +1,7 @@
 import logging
 import os
 
-from langchain_community.embeddings import DashScopeEmbeddings, OpenAIEmbeddings
+from langchain_community.embeddings import DashScopeEmbeddings
 from langchain_core.embeddings import Embeddings
 
 logger = logging.getLogger(__name__)
@@ -14,7 +14,9 @@ class SafeDashScopeEmbeddings(DashScopeEmbeddings):
         result = super().embed_query(text)
         if not result:
             logger.error(f"DashScope embed_query 返回空结果, 输入文本: {text[:100]}")
-            raise ValueError(f"Embedding 返回空结果，请检查 DASHSCOPE_API_KEY 是否正确设置。输入: {text[:100]}")
+            raise ValueError(
+                f"Embedding 返回空结果，请检查 DASHSCOPE_API_KEY 是否正确设置。输入: {text[:100]}"
+            )
         return result
 
 

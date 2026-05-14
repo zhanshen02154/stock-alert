@@ -38,7 +38,9 @@ class ChatService:
         )
         return msg_id
 
-    async def chat_astream(self, session_id: str, user_id: int) -> AsyncGenerator[SSEMessage]:
+    async def chat_astream(
+        self, session_id: str, user_id: int
+    ) -> AsyncGenerator[SSEMessage]:
         """
         异步流式聊天
         :param session_id: 会话ID
@@ -54,7 +56,9 @@ class ChatService:
             full_content = []
             user_message = sanitize_text(text=msg_info["content"])
 
-            async for chunk in self.__agent.astream(message=user_message, thread_id=session_id, user_id=user_id):
+            async for chunk in self.__agent.astream(
+                message=user_message, thread_id=session_id, user_id=user_id
+            ):
                 if chunk.get("type") == "text":
                     full_content.append(chunk["text"])
                     yield SSEMessage(
@@ -73,6 +77,7 @@ class ChatService:
             )
         except Exception as e:
             logger.error(e)
+            print(e)
             final_msg = str(e)
             yield SSEMessage(type="error", content=str(e), message_id=message_id)
         finally:

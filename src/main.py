@@ -16,6 +16,7 @@ from src.api.routers.chat import router as chat_router
 from src.api.routers.health import router as health_router
 from src.api.routers.user import routers as user_router
 from src.graph import InventoryManagerGraph
+from src.knowledge import BaseKnowledgeRetriever
 from src.knowledge.vector_store import load_milvus_manager, close_milvus_manager
 from src.memory.checkpointer import CheckpointerFactory
 from src.storage.mysql import create_mysql_session_store
@@ -59,6 +60,7 @@ async def lifespan(fastapp: FastAPI):
 
         # 启动milvus
         load_milvus_manager()
+        BaseKnowledgeRetriever.load()
 
         # 启动LangGraph应用
         fastapp.state.inventory_graph = InventoryManagerGraph(
@@ -80,6 +82,7 @@ async def lifespan(fastapp: FastAPI):
         await HttpClient.close_all()
 
         await close_milvus_manager()
+        BaseKnowledgeRetriever.close()
 
         # 关闭工具
         ToolRegistry.cleanup()

@@ -1,6 +1,7 @@
 import logging
 from typing import Any
 
+from langchain_community.cache import AsyncRedisCache
 from redis.asyncio import Redis
 
 from config.settings import get_storage_config
@@ -73,3 +74,17 @@ def create_redis_client() -> RedisClient:
     """创建Redis客户端"""
     conf = get_storage_config("redis")
     return RedisClient(conf)
+
+
+def create_async_redis_cache() -> AsyncRedisCache:
+    conf = get_storage_config("redis")
+    return AsyncRedisCache(
+        redis_=Redis(
+            host=conf.get("host", "localhost"),
+            port=conf.get("port", 6379),
+            password=conf.get("password", ""),
+            db=conf.get("db", 0),
+            max_connections=conf.get("max_connections", 30),
+            health_check_interval=conf.get("health_check_interval", 15),
+        )
+    )

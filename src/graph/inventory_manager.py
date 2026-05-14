@@ -1,5 +1,6 @@
 import logging
 import os
+import uuid
 from typing import Any, Optional, List
 
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -7,7 +8,7 @@ from langchain_core.runnables import RunnableConfig
 
 from config.settings import get_llm_config
 from src.core.llm.factory import create_llm_client
-from src.graph.setup import GraphSetup
+from src.graph.setup import GraphSetup, Context
 from src.memory.checkpointer import CheckpointerFactory
 
 logger = logging.getLogger(__name__)
@@ -65,11 +66,23 @@ class InventoryManagerGraph:
         :return:
         """
         config: RunnableConfig = {
-            "configurable": {"thread_id": thread_id, "user_id": user_id}
+            "recursion_limit": 15,
+            "configurable": {
+                "thread_id": thread_id,
+            },
         }
-        input_data = {"messages": [HumanMessage(content=message)], "user_input": message}
+        user_msg = f"""
+用户输入: {message}
+"""
+        input_data = {
+            "messages": [HumanMessage(content=user_msg, id=str(uuid.uuid4()))],
+            "user_input": message,
+        }
         async for chunk in self.setup.workflow.astream(
-            input_data, config=config, stream_mode="updates"
+            input_data,
+            config=config,
+            stream_mode="updates",
+            context=Context(user_id=user_id),
         ):
             if isinstance(chunk, dict):
                 for node_name, node_data in chunk.items():
@@ -93,7 +106,7 @@ class InventoryManagerGraph:
         self.callbacks = None
 
         if self.setup:
-            self.setup.close()
+            await self.setup.close()
 
         logger.info("AI代理已关闭")
 
@@ -107,7 +120,7 @@ class InventoryManagerGraph:
             await CheckpointerFactory.clear_checkpoint_by_thread_id(session_id)
         except Exception as e:
             logger.error(f"删除会话{session_id}失败: {e}")
-            raise
+            raise e
 
     async def summary(self, message: str) -> str:
         """
@@ -120,7 +133,7 @@ class InventoryManagerGraph:
             resp = await self.qwen_llm.ainvoke(
                 [
                     SystemMessage(content=sys_prompt),
-                    HumanMessage(content=message),
+                    HumanMessage(content=message, id=str(uuid.uuid4())),
                 ]
             )
             return resp.content
