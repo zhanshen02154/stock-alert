@@ -68,6 +68,7 @@ class OpenAIClient(BaseLLMClient):
         if (
             llm_kwargs["model"] == "qwen3.6-plus"
             or llm_kwargs["model"] == "qwen3.5-plus"
+            or llm_kwargs["model"] == "qwen3.5-plus-2026-04-20"
         ):
             return ChatQwen(**llm_kwargs)
 

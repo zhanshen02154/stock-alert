@@ -51,7 +51,7 @@
 | kubernetes | 1.23.1  | 容器编排            |
 | docker     | 20.10.7 | 容器运行            |
 | jenkins    | 2.346.1 | CI/CD           |
-| MySQL      | 8.0.45  | 数据库             |
+| MySQL      | 8.0.45  | 持久层             |
 | Apisix     | 3.4.1   | API网关           |
 | harbor     | 1.8.6   | docker私有仓库      |
 | python     | 3.13.9  | 开发语言            |
@@ -68,10 +68,12 @@
 - text-embedding-v4
 - qwen3.5-plus
 - ChatGPT 5.4
+- DeepSeek-R1
+- qwen3.6-plus
 
 ## 本地开发指南
 - 安装Docker（Windows/Linux/Mac均可）。
-- 将docker-compose-dev.yml复制到docker-compose.yml，并联系项目管理员获取环境变量写入到yml。
+- 将docker-compose-dev.yml复制到docker-compose.yml。
 - 编译docker镜像为stock-alert:local。
 - 运行命令
 ```bash

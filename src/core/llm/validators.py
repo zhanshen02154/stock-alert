@@ -1,5 +1,11 @@
 _VALID_MODELS = {
-    "qwen": ["qwen-plus", "qwen3.6-plus", "qwen3.5-plus", "qwq-plus"],
+    "qwen": [
+        "qwen-plus",
+        "qwen3.6-plus",
+        "qwen3.5-plus",
+        "qwq-plus",
+        "qwen3.5-plus-2026-04-20",
+    ],
     "deepseek": ["deepseek-r1"],
 }
 
