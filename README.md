@@ -46,20 +46,28 @@
 ```
 
 ## 技术选型
-| 开发语言及工具 | 版本    | 用途               |
-| -------------- | ------- | ------------------ |
-| kubernetes     | 1.23.1  | 容器编排           |
-| docker         | 20.10.7 | 容器运行           |
-| jenkins        | 2.346.1 | CI/CD              |
-| MySQL          | 8.0.45  | 数据库             |
-| Apisix         | 3.4.1   | API网关            |
-| harbor         | 1.8.6   | docker私有仓库     |
-| python         | 3.13.9  | 开发语言           |
-| Consul         | 1.7.3   | 服务注册/发现      |
-| Github         | -       | 代码托管和项目管理 |
-| Kafka          | 3.0.1   | 消息队列           |
-| langchain      | 1.2.12  | 开发框架           |
-| Milvus         | 2.6.13  | 向量数据库         |
+| 开发语言及工具    | 版本      | 用途              |
+|------------|---------|-----------------|
+| kubernetes | 1.23.1  | 容器编排            |
+| docker     | 20.10.7 | 容器运行            |
+| jenkins    | 2.346.1 | CI/CD           |
+| MySQL      | 8.0.45  | 数据库             |
+| Apisix     | 3.4.1   | API网关           |
+| harbor     | 1.8.6   | docker私有仓库      |
+| python     | 3.13.9  | 开发语言            |
+| Consul     | 1.7.3   | 服务注册/发现         |
+| Github     | -       | 代码托管和项目管理       |
+| Kafka      | 3.0.1   | 消息队列            |
+| langchain  | 1.2.12  | 开发框架            |
+| Milvus     | 2.6.13  | 向量数据库           |
+| langgraph  | 1.1.0   | 多智能体协作          |
+| RAGAS      | 1.1.0   | RAG评估           |
+| Redis      | 7.2     | 检查点、节点缓存、顶层应用缓存 |
+
+## 大模型
+- text-embedding-v4
+- qwen3.5-plus
+- ChatGPT 5.4
 
 ## 本地开发指南
 - 安装Docker（Windows/Linux/Mac均可）。

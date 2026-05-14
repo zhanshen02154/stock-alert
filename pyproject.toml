@@ -34,7 +34,9 @@ dependencies = [
     "pymilvus==2.6.9",
     "dashscope==1.25.17",
     "langmem>=0.0.30",
-    "asyncmy>=0.2.11"
+    "asyncmy>=0.2.11",
+    "langgraph-checkpoint-mysql>=3.0.0",
+    "aiomysql>=0.3.2"
 ]
 
 [[tool.uv.index]]
@@ -44,5 +46,6 @@ default = true
 [dependency-groups]
 dev = [
     "pytest>=9.0.3",
-    "ragas>=0.4.3"
+    "ragas>=0.4.3",
+    "IPython>=8.0.0"
 ]
