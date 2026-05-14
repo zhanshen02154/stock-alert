@@ -2,7 +2,7 @@ from typing import Optional
 
 from src.core.llm.base_client import BaseLLMClient
 
-_OPENAI_COMPATIBLE = ("qwen",)
+_OPENAI_COMPATIBLE = ("qwen", "deepseek")
 
 # Provider base URLs and API key env vars
 _PROVIDER_CONFIG = {

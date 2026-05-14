@@ -28,6 +28,7 @@ _PROVIDER_CONFIG = {
         "https://dashscope.aliyuncs.com/compatible-mode/v1",
         "DASHSCOPE_API_KEY",
     ),
+    "deepseek": ("https://api.deepseek.com", "DEEPSEEK_API_KEY"),
 }
 
 
@@ -51,12 +52,8 @@ class OpenAIClient(BaseLLMClient):
         if self.provider in _PROVIDER_CONFIG:
             default_base, api_key_env = _PROVIDER_CONFIG[self.provider]
             llm_kwargs["base_url"] = self.base_url or default_base
-            if api_key_env:
-                api_key = os.environ.get(api_key_env)
-                if api_key:
-                    llm_kwargs["api_key"] = api_key
-            else:
-                llm_kwargs["api_key"] = "ollama"
+            if "api_key" not in self.kwargs:
+                llm_kwargs["api_key"] = os.environ.get(api_key_env)
         elif self.base_url:
             llm_kwargs["base_url"] = self.base_url
 

@@ -1,4 +1,7 @@
-_VALID_MODELS = {"qwen": ["qwen-plus", "qwen3.6-plus", "qwen3.5-plus", "qwq-plus"]}
+_VALID_MODELS = {
+    "qwen": ["qwen-plus", "qwen3.6-plus", "qwen3.5-plus", "qwq-plus"],
+    "deepseek": ["deepseek-r1"],
+}
 
 
 def validate_model(model: str, provider: str) -> bool:
