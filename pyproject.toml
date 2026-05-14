@@ -33,6 +33,8 @@ dependencies = [
     "python-multipart>=0.0.24",
     "pymilvus==2.6.9",
     "dashscope==1.25.17",
+    "langmem>=0.0.30",
+    "asyncmy>=0.2.11"
 ]
 
 [[tool.uv.index]]
