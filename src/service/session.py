@@ -1,13 +1,13 @@
 from typing import Any
 
-from src.agents.inventory_agent import InventoryAgent
+from src.graph.inventory_manager import InventoryManagerGraph
 from src.repository.session import SessionRepository
 
 
 class SessionService:
     """会话管理服务层 - 同步实现"""
 
-    def __init__(self, session_repo: SessionRepository, agent: InventoryAgent):
+    def __init__(self, session_repo: SessionRepository, agent: InventoryManagerGraph):
         self.__session_repo = session_repo
         self.__agent = agent
 

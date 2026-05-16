@@ -1,38 +1,45 @@
+import logging
 from typing import Optional
+
 import httpx
 
+logger = logging.getLogger(__name__)
 
-class ApiClient:
-    """API客户端管理器"""
-    def __init__(self):
-        self.__sync_client: Optional[httpx.Client] = None
-        self.__async_client: Optional[httpx.AsyncClient] = None
 
-    def get_sync_client(self) -> httpx.Client:
+class HttpClient:
+    """API客户端"""
+
+    __sync_client: Optional[httpx.Client] = None
+    __async_client: Optional[httpx.AsyncClient] = None
+
+    @classmethod
+    def get_sync_client(cls) -> httpx.Client:
         """获取同步HTTP客户端（单例模式）"""
-        if self.__sync_client is None:
-            self.__sync_client = httpx.Client(
+        if cls.__sync_client is None:
+            cls.__sync_client = httpx.Client(
                 timeout=8,
-                limits=httpx.Limits(max_connections=100, max_keepalive_connections=20)
+                limits=httpx.Limits(max_connections=100, max_keepalive_connections=20),
             )
-        return self.__sync_client
+        return cls.__sync_client
 
-    def get_async_client(self) -> httpx.AsyncClient:
+    @classmethod
+    def get_async_client(cls) -> httpx.AsyncClient:
         """获取异步HTTP客户端（单例模式）"""
-        if self.__async_client is None:
-            self.__async_client = httpx.AsyncClient(
+        if cls.__async_client is None:
+            cls.__async_client = httpx.AsyncClient(
                 timeout=8,
-                limits=httpx.Limits(max_connections=100, max_keepalive_connections=20)
+                limits=httpx.Limits(max_connections=100, max_keepalive_connections=20),
             )
-        return self.__async_client
+        return cls.__async_client
 
-    async def close_all(self):
+    @classmethod
+    async def close_all(cls):
         """关闭所有客户端连接"""
-        if self.__sync_client:
-            self.__sync_client.close()
-            self.__sync_client = None
-        if self.__async_client:
-            await self.__async_client.aclose()
-            self.__async_client = None
+        if cls.__sync_client:
+            cls.__sync_client.close()
+            cls.__sync_client = None
+        if cls.__async_client:
+            await cls.__async_client.aclose()
+            cls.__async_client = None
 
-ApiClientManager = ApiClient()
+        logger.info("HTTP客户端已关闭")

@@ -19,7 +19,11 @@ class AuthMiddleware:
         "/docs",
         "/openapi.json",
         "/redoc",
-        '/api/v1/chats/ai-response'  # SSE
+    }
+    
+    # 需要从URL参数获取token的路由
+    TOKEN_FROM_QUERY_PATHS = {
+        '/api/v1/chats/ai-response'  # SSE接口，token通过querystring传递
     }
 
     def __init__(self, app: ASGIApp):
@@ -41,21 +45,41 @@ class AuthMiddleware:
             await self.app(scope, receive, send)
             return
 
-        # 从 headers 获取 Authorization
-        headers = dict(scope.get("headers", []))
-        authorization = headers.get(b"authorization", b"").decode("utf-8")
+        token = None
+        
+        # 检查是否需要从URL参数获取token
+        if path in self.TOKEN_FROM_QUERY_PATHS:
+            # 从URL查询参数获取token
+            query_string = scope.get("query_string", b"").decode("utf-8")
+            if query_string:
+                params = dict(param.split("=") for param in query_string.split("&"))
+                token = params.get("token", "")
+        
+        # 如果没有从URL参数获取到token，尝试从headers获取
+        if not token:
+            # 从 headers 获取 Authorization
+            headers = dict(scope.get("headers", []))
+            authorization = headers.get(b"authorization", b"").decode("utf-8")
 
-        if not authorization:
-            await self._send_unauthorized(send, "缺少Authorization header")
-            return
+            if not authorization:
+                # 对于需要token的接口，如果没有token，继续执行（允许无状态访问）
+                if path in self.TOKEN_FROM_QUERY_PATHS:
+                    # 设置默认 user_id 为 0
+                    if "state" not in scope:
+                        scope["state"] = {}
+                    scope["state"]["user_id"] = 0
+                    await self.app(scope, receive, send)
+                    return
+                await self._send_unauthorized(send, "缺少Authorization header")
+                return
 
-        # 验证 Bearer 格式
-        if not authorization.startswith("Bearer "):
-            await self._send_unauthorized(send, "无效的Authorization header格式")
-            return
+            # 验证 Bearer 格式
+            if not authorization.startswith("Bearer "):
+                await self._send_unauthorized(send, "无效的Authorization header格式")
+                return
 
-        # 提取 token
-        token = authorization.replace("Bearer ", "")
+            # 提取 token
+            token = authorization.replace("Bearer ", "")
 
         # 从 token 中获取 user_id
         user_id = JWTUtil.get_user_id_from_token(token)

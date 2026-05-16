@@ -1,8 +1,7 @@
 import logging
 from typing import Any, Optional, List
 
-from langchain_core.documents import Document
-from langchain_milvus import Milvus, BM25BuiltInFunction
+from pymilvus import connections, MilvusClient, AnnSearchRequest
 from pymilvus.milvus_client import IndexParams
 
 from config.settings import get_storage_config
@@ -13,89 +12,93 @@ logger = logging.getLogger(__name__)
 
 class MilvusManager:
     def __init__(self, connection_args: dict[str, Any]):
-        self.embeddings = get_qwen_emeddings()
-        self.connection_args = connection_args
-        # 缓存实例：{collection_name: Milvus_Object}
-        self._instances: dict[str, Milvus] = {}
+        self._embeddings = get_qwen_emeddings()
+        self.__connection_args = connection_args
+        self.__alias = "default"
+        self.__client = MilvusClient(
+            uri=self.__connection_args["uri"],
+            alias=self.__alias,
+            db_name="default",
+            timeout=10,
+        )
 
-    def get_collection(
-        self,
-        collection_name: str,
-    ) -> Milvus:
-        """获取或创建 Collection 实例
-        :param collection_name: 集合名称
+    def connect(self):
         """
-        if collection_name not in self._instances:
-            self._instances[collection_name] = Milvus(
-                embedding_function=self.embeddings,
-                collection_name=collection_name,
-                connection_args=self.connection_args,
-                index_params=[
-                    {
-                        "metric_type": "COSINE",  # 余弦相似度，适合文本语义
-                        "index_type": "HNSW",  # 高性能图索引，召回率高
-                        "params": {
-                            "M": 16,  # 每个节点的连接数，影响召回率（越大越好，但内存消耗大）
-                            "efConstruction": 256,  # 构建时的搜索范围，影响构建质量
-                        },
-                    },
-                    {
-                        "metric_type": "BM25",
-                        "index_type": "AUTOINDEX",
-                    },
-                ],
-                vector_field=["dense_vector", "sparse_vector"],
-                builtin_function=BM25BuiltInFunction(
-                    input_field_names="text", output_field_names="sparse_vector"
-                ),
-                drop_old=False,
-                auto_id=True,
-                consistency_level="Bounded",
-                timeout=30,
-            )
-
-        return self._instances[collection_name]
+        连接到数据库
+        :return:
+        """
+        connections.connect(
+            alias=self.__alias,
+            user=self.__connection_args["user"],
+            password=self.__connection_args["password"],
+            host=self.__connection_args["host"],
+            port=self.__connection_args["port"],
+            db_name=self.__connection_args["db_name"],
+        )
+        self.__client.load_collection(collection_name="smart_procurement_rules")
 
     def create_index(
         self,
         collection_name: str,
         index_params: IndexParams,
-        timeout: Optional[float] = None,
+        timeout: Optional[float] = 8,
         **kwargs,
-    ) -> None:
-        if collection_name not in self._instances:
-            raise ValueError(f"Collection {collection_name} not found")
-        return self._instances[collection_name].client.create_index(
-            collection_name=collection_name,
-            index_params=index_params,
-            timeout=timeout,
-            **kwargs,
-        )
+    ):
+        """
+        创建索引
+        :param collection_name: 集合名称
+        :param index_params: 索引参数
+        :param timeout: 超时时间
+        :param kwargs: 其他参数（和client.create_index参数类似）
+        :return:
+        """
+        try:
+            self.__client.create_index(
+                collection_name=collection_name,
+                index_params=index_params,
+                timeout=timeout,
+                **kwargs,
+            )
+        except Exception as e:
+            logger.error(e, exc_info=e)
 
-    def similarity_search(
+    def hybrid_search(
         self,
         collection_name: str,
-        query: str,
+        ann_requests: List[AnnSearchRequest],
+        search_kwargs: dict[str, Any],
         k: int = 4,
-        param: Optional[dict | list[dict]] = None,
-        expr: Optional[str] = None,
-        timeout: Optional[float] = None,
-        **kwargs: Any,
-    ) -> List[Document]:
-        self.get_collection(collection_name=collection_name)
-        return self._instances[collection_name].similarity_search(
-            query=query, k=k, params=param, expr=expr, timeout=timeout, **kwargs
-        )
+        timout: Optional[float] = 8.0,
+    ) -> list[Any] | list[list[dict]]:
+        """
+        混合搜索 - 使用 AnnRequest 构造查询
+        :param timout: 超时时间
+        :param ann_requests:
+        :param collection_name: 集合名称
+        :param k: 返回结果数量，默认3
+        :param search_kwargs: 其他参数
+        :return: 搜索结果列表
+        """
+        try:
+            # 执行混合搜索
+            results = self.__client.hybrid_search(
+                reqs=ann_requests,
+                collection_name=collection_name,
+                limit=k,
+                output_fields=["text", "chapter_path", "document_title"],
+                timeout=timout,
+                **search_kwargs,
+            )
 
-    async def aclose(self):
+            return results
+
+        except Exception as e:
+            logger.error(f"混合搜索失败: {e}", exc_info=e)
+            return []
+
+    def close(self):
         """关闭所有缓存的 Milvus 实例"""
-        if self._instances:
-            for k in self._instances:
-                instance = self._instances[k]
-                instance.client.close()
-                if instance.aclient is not None:
-                    await instance.aclient.close()
-        self._instances.clear()
+        self.__client.close()
         logger.info("Milvus管理器已关闭")
 
 
@@ -114,8 +117,13 @@ def load_milvus_manager():
             "uri": f"http://{conf.get('host', '127.0.0.1')}:{conf.get('port', 19530)}",
             "token": f"{conf.get("user")}:{conf.get('password')}",
             "db_name": conf.get("db_name", "inventory"),
+            "host": conf.get("host", "127.0.0.1"),
+            "port": conf.get("port", 19530),
+            "user": conf.get("user", "testuser"),
+            "password": conf.get("password", ""),
         }
     )
+    milvus_manager.connect()
     logger.info("Milvus管理器加载完成")
 
 
@@ -126,7 +134,14 @@ async def close_milvus_manager():
     """
     global milvus_manager
     if milvus_manager is not None:
-        await milvus_manager.aclose()
+        milvus_manager.close()
         milvus_manager = None
 
         logger.info("Milvus管理器已关闭")
+
+
+def get_milvus_manager():
+    global milvus_manager
+    if milvus_manager is None:
+        return None
+    return milvus_manager
