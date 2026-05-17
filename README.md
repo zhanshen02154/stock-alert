@@ -1,5 +1,10 @@
 # 库存智能助手
 
+[![Python](https://img.shields.io/badge/Python-3.13-blue.svg)](https://www.python.org/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-1.1.0-FF6B6B.svg)](https://langchain-ai.github.io/langgraph/)
+[![LangChain](https://img.shields.io/badge/LangChain-1.2.12-FF6B6B.svg)](https://www.langchain.com/)
+[![Milvus](https://img.shields.io/badge/Milvus-2.6.13-00D4FF.svg)](https://milvus.io/)
+
 ## 项目简介
 库存智能助手是一个用于扩充库存系统能力的AI Agent，依托[商品服务](https://github.com/zhanshen02154/product)开发，进一步挖掘库存系统的价值，是[事件驱动微服务](https://github.com/zhanshen02154/go-micro-service)的附属产品。
 
