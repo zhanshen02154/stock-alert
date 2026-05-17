@@ -3,7 +3,7 @@ from typing import Optional
 
 from langchain_core.language_models import BaseChatModel
 from langchain_openai import ChatOpenAI
-from langchain_qwq import ChatQwen
+from langchain_qwq import ChatQwen, ChatQwQ
 
 from src.core.llm.base_client import BaseLLMClient
 from src.core.llm.validators import validate_model
@@ -29,6 +29,7 @@ _PROVIDER_CONFIG = {
         "DASHSCOPE_API_KEY",
     ),
     "deepseek": ("https://api.deepseek.com", "DEEPSEEK_API_KEY"),
+    "openai": ("https://api.ofox.ai/v1", "OPENAI_API_KEY"),
 }
 
 
@@ -69,8 +70,12 @@ class OpenAIClient(BaseLLMClient):
             llm_kwargs["model"] == "qwen3.6-plus"
             or llm_kwargs["model"] == "qwen3.5-plus"
             or llm_kwargs["model"] == "qwen3.5-plus-2026-04-20"
+            or llm_kwargs["model"] == "qwen3-14b"
+            or llm_kwargs["model"] == "qwen3.5-plus-2026-02-15"
         ):
             return ChatQwen(**llm_kwargs)
+        elif llm_kwargs["model"] == "qwq-plus":
+            return ChatQwQ(**llm_kwargs)
 
         return ChatOpenAI(**llm_kwargs)
 

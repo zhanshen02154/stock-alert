@@ -13,13 +13,13 @@ MICROSERVICE_URL = os.getenv("MICROSERVICE_URL", "") + "/api/v1"
 class QueryInventoryInput(BaseToolInput):
     """检查库存输入参数"""
 
-    sku_code: str = Field(description="商品SKU编号必须要SKU开头", pattern=r"^SKU")
+    sku_code: str = Field(description="商品SKU编号必须要SKU或SKUP开头", pattern=r"^SKU")
 
 
 class QueryInventoryOutput(BaseModel):
     """检查库存输出参数"""
 
-    sku_code: str = Field(default="", description="商品SKU的编号（SKU开头）")
+    sku_code: str = Field(default="", description="商品SKU的编号（SKU或SKUP开头）")
     name: str = Field(default="", description="商品SKU名称")
     stock: int = Field(default=0, description="商品当前库存")
     status: int = Field(
@@ -32,8 +32,8 @@ class QuerySalesVolumeInput(BaseToolInput):
     """查询销量输入参数"""
 
     sku_code: str = Field(description="商品SKU编号", pattern=r"^SKU")
-    start_time: str = Field(description="开始时间，格式：YYYY-MM-DD HH:MM:SS")
-    end_time: str = Field(description="结束时间，格式：YYYY-MM-DD HH:MM:SS")
+    start_time: str = Field(description="开始时间，格式：YYYY-MM-DD")
+    end_time: str = Field(description="结束时间，格式：YYYY-MM-DD")
 
 
 class QuerySalesVolumeOutput(BaseModel):
@@ -102,7 +102,9 @@ def query_inventory(sku_code: str) -> ToolResult:
         sku_code: 商品SKU编号必须要SKU开头
     """
     if not sku_code.startswith("SKU"):
-        return ToolResult(status="failed", data=None, error="sku_code必须以SKU开头")
+        return ToolResult(
+            status="failed", data=None, error="sku_code必须以SKU或SKUP开头"
+        )
 
     url = f"{MICROSERVICE_URL}/inventory/sku"
     resp = HttpClient.get_sync_client().get(
@@ -180,8 +182,8 @@ def query_daily_sales_volume(
     url = f"{MICROSERVICE_URL}/inventory/daily_sales_volume"
     params = {
         "sku_code": sku_code,
-        "start_date": start_date,
-        "end_date": end_date,
+        "start_date": f"{start_date} 00:00:00",
+        "end_date": f"{end_date} 23:59:59",
     }
     resp = HttpClient.get_sync_client().get(url=url, params=params, timeout=5)
     if resp.status_code != 200:
