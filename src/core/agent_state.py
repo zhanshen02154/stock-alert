@@ -1,5 +1,5 @@
 import operator
-from typing import Annotated
+from typing import Annotated, List
 
 from langgraph.graph import MessagesState
 
@@ -15,4 +15,4 @@ class AgentState(MessagesState):
 
     task: TaskInfo | None  # 确定任务
 
-    completed_task: Annotated[TaskInfo, operator.add]  # 已完成的任务
+    completed_task: Annotated[List[TaskInfo], operator.add]  # 已完成的任务
