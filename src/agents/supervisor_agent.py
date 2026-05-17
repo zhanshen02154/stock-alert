@@ -3,7 +3,7 @@ from typing import Literal
 from langchain.agents import create_agent
 from langchain.agents.middleware import SummarizationMiddleware
 from langchain_core.language_models import BaseChatModel
-from langfuse import observe
+from langfuse.decorators import observe
 from langgraph.constants import END
 from langgraph.types import Command
 
