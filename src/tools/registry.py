@@ -29,16 +29,14 @@ class ToolRegistry:
     def _load_tool_groups(cls):
         if not cls.tool_groups:
             cls.tool_groups = {
-                "tools_data_query": [
+                "tools_supply_chain": [
                     query_inventory,
                     query_sales_volume,
                     query_daily_sales_volume,
-                ],
-                "tools_knowledge_search": [search_smart_procurement_rules],
-                "tools_inventory_operator": [restock_apply],
-                "tools_supplier_agent": [
                     query_suppliers,
+                    restock_apply,
                 ],
+                "tools_knowledges": [search_smart_procurement_rules],
             }
 
     @classmethod

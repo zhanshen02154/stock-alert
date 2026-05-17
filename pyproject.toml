@@ -1,6 +1,6 @@
 [project]
 name = "stock-alert"
-version = "2.0.0"
+version = "3.0.0"
 description = "库存管理AI Agent"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -36,7 +36,8 @@ dependencies = [
     "langmem>=0.0.30",
     "asyncmy>=0.2.11",
     "langgraph-checkpoint-mysql>=3.0.0",
-    "aiomysql>=0.3.2"
+    "aiomysql>=0.3.2",
+    "langfuse>=2.60.10",
 ]
 
 [[tool.uv.index]]

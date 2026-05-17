@@ -1,10 +1,11 @@
 import logging
 import os
-import uuid
+import time
 from typing import Any, Optional, List
 
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
+from langfuse.decorators import observe
 
 from config.settings import get_llm_config
 from src.core.llm.factory import create_llm_client
@@ -29,14 +30,18 @@ class InventoryManagerGraph:
         self._config = config
         self.callbacks = callbacks or []
         llm_kwargs = self._get_provider_kwargs(self._config["llm_provider"])
-        self.qwen_client = create_llm_client(
+        self.openai_client = create_llm_client(
             model=llm_kwargs["model"],
             provider=self._config["llm_provider"],
-            api_key=os.getenv("DASHSCOPE_API_KEY"),
-            base_url=os.getenv("DASHSCOPE_API_BASE"),
             **llm_kwargs["params"],
         )
-        self.qwen_llm = self.qwen_client.get_llm()
+        worker_llm_config = get_llm_config("qwen")
+        worker_llm_config["api_key"] = os.environ.get("DASHSCOPE_API_KEY")
+        self._workerllm__client = create_llm_client(
+            provider="qwen",
+            base_url=os.environ.get("DASHSCOPE_API_BASE"),
+            **worker_llm_config,
+        )
         self.setup = self.setup_graph()
 
     def _get_provider_kwargs(self, provider: str) -> dict[str, Any]:
@@ -53,10 +58,11 @@ class InventoryManagerGraph:
     def setup_graph(self):
         """设置graph"""
         return GraphSetup(
-            llm=self.qwen_llm,
+            llm=self.openai_client.get_llm(),
             conf=self._config,
         )
 
+    @observe(capture_output=False)
     async def astream(self, message: str, thread_id: str, user_id: int):
         """
         异步流式传输
@@ -66,16 +72,19 @@ class InventoryManagerGraph:
         :return:
         """
         config: RunnableConfig = {
-            "recursion_limit": 15,
+            "recursion_limit": 17,
             "configurable": {
                 "thread_id": thread_id,
             },
         }
+        current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         user_msg = f"""
+请根据用户输入的内容完成回答
+当前日期: {current_time}
 用户输入: {message}
 """
         input_data = {
-            "messages": [HumanMessage(content=user_msg, id=str(uuid.uuid4()))],
+            "messages": ("user", user_msg),
             "user_input": message,
         }
         async for chunk in self.setup.workflow.astream(
@@ -91,15 +100,40 @@ class InventoryManagerGraph:
                         if messages and hasattr(messages[-1], "content"):
                             content = messages[-1].content
                             if content:
-                                yield {"type": "text", "text": content}
+                                last_msg = messages[-1]
+                                if hasattr(
+                                    last_msg, "response_metadata"
+                                ) and last_msg.response_metadata.get(
+                                    "__is_handoff_back"
+                                ):
+                                    for msg in reversed(messages[:-1]):
+                                        if hasattr(
+                                            msg, "response_metadata"
+                                        ) and msg.response_metadata.get(
+                                            "__is_handoff_back"
+                                        ):
+                                            continue
+                                        content = msg.content
+                                        break
+                                    else:
+                                        continue
+                                if isinstance(content, list):
+                                    text_parts = []
+                                    for block in content:
+                                        if (
+                                            isinstance(block, dict)
+                                            and block.get("type") == "text"
+                                        ):
+                                            text_parts.append(block.get("text", ""))
+                                    yield {"type": "text", "text": "".join(text_parts)}
+                                else:
+                                    yield {"type": "text", "text": content}
 
     async def aclose(self):
         """
         异步关闭
         :return:
         """
-        self.qwen_llm = None
-        self.qwen_client = None
         if self._config:
             self._config.clear()
         self._config = None
@@ -130,10 +164,10 @@ class InventoryManagerGraph:
         """
         sys_prompt = "请为以下对话内容生成不超过30字的标题，只输出标题本身，不要附加任何其他内容。"
         try:
-            resp = await self.qwen_llm.ainvoke(
+            resp = await self._workerllm__client.get_llm().ainvoke(
                 [
                     SystemMessage(content=sys_prompt),
-                    HumanMessage(content=message, id=str(uuid.uuid4())),
+                    HumanMessage(content=message),
                 ]
             )
             return resp.content
