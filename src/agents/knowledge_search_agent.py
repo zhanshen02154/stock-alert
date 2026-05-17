@@ -59,7 +59,7 @@ def create_knowledge_search_agent(llm: BaseChatModel):
         return Command(
             update={
                 "messages": messages,
-                "completed_task": task,
+                "completed_task": [task],
             },
             goto=AgentType.SUPERVISOR,
         )

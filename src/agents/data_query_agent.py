@@ -75,7 +75,7 @@ def create_supply_chain_agent(llm: BaseChatModel):
         return Command(
             update={
                 "messages": messages,
-                "completed_task": task,
+                "completed_task": [task],
             },
             goto=AgentType.SUPERVISOR,
         )
