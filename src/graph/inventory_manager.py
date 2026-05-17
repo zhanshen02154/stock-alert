@@ -5,7 +5,7 @@ from typing import Any, Optional, List
 
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
-from langfuse import observe
+from langfuse.decorators import observe
 
 from config.settings import get_llm_config
 from src.core.llm.factory import create_llm_client
@@ -59,7 +59,6 @@ class InventoryManagerGraph:
         """设置graph"""
         return GraphSetup(
             llm=self.openai_client.get_llm(),
-            worker_llm=self._workerllm__client.get_llm(),
             conf=self._config,
         )
 

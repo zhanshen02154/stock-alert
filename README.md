@@ -100,7 +100,7 @@
 2. 构建镜像：`docker build -t stock-alert:local .`
 3. 启动服务：`docker-compose up -d`
 
-关键配置项（详见 docker-compose-dev.yml）：
+## 关键配置项（详见 docker-compose-dev.yml）
 | 配置项            | 说明                     |
 | ----------------- | ------------------------ |
 | CONSUL_HOST       | Consul 服务地址          |

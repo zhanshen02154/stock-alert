@@ -5,7 +5,7 @@ from langchain.agents import create_agent
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import SystemMessage, ToolMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
-from langfuse import observe
+from langfuse.decorators import observe
 from langgraph.types import Command
 
 from config.prompts.system import get_system_prompt
