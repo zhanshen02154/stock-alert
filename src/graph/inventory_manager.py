@@ -59,7 +59,6 @@ class InventoryManagerGraph:
         """设置graph"""
         return GraphSetup(
             llm=self.openai_client.get_llm(),
-            worker_llm=self._workerllm__client.get_llm(),
             conf=self._config,
         )
 
