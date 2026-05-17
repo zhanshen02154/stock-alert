@@ -18,7 +18,7 @@
 
 ## 与langgraph-supervisor的区别
 
-| 差异点                  | langgraph-supervisor | 本项目的supervisor架构 |
+| 功能点                  | langgraph-supervisor | 本项目的supervisor架构 |
 | ----------------------- | -------------------- | ---------------------- |
 | Worker消息传输机制      | 全量传输             | 仅传递任务相关信息     |
 | 上下文噪声              | √                    | ×                      |
