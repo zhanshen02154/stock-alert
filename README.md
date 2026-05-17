@@ -1,7 +1,7 @@
 # 库存智能助手
 
 ## 项目简介
-**个人项目** - 库存智能助手是一个用于扩充库存系统能力的AI Agent，依托[商品服务](https://github.com/zhanshen02154/product)开发，进一步挖掘库存系统的价值，是[事件驱动微服务](https://github.com/zhanshen02154/go-micro-service)的附属产品。
+库存智能助手是一个用于扩充库存系统能力的AI Agent，依托[商品服务](https://github.com/zhanshen02154/product)开发，进一步挖掘库存系统的价值，是[事件驱动微服务](https://github.com/zhanshen02154/go-micro-service)的附属产品。
 
 该项目依托先前搭建的微服务基础设施，部署在 K8S 集群，配备全套自动化部署流程。全项目采用 supervisor 架构，Worker Agent 分为供应链 Agent 和知识库 Agent，负责执行和交接。该系统与后端 API 接口对接，可完成补货建议、库存查询、采购建议、补货申请等多种任务。
 
