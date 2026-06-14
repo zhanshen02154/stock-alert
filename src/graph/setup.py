@@ -27,12 +27,15 @@ class GraphSetup:
     设置Graph
     """
 
-    def __init__(self, llm: BaseChatModel, conf: dict[str, Any]):
+    def __init__(
+        self, llm: BaseChatModel, worker_llm: BaseChatModel, conf: dict[str, Any]
+    ):
         self.llm = llm
         self.graph = StateGraph(AgentState, context_schema=Context)
         self.supervisor_agent = create_supervisor_agent(llm=llm)
-        self._supply_chain_agent = create_supply_chain_agent(llm=llm)
-        self._knowledge_agent = create_knowledge_search_agent(llm=llm)
+        self._worker_llm = worker_llm
+        self._supply_chain_agent = create_supply_chain_agent(llm=worker_llm)
+        self._knowledge_agent = create_knowledge_search_agent(llm=worker_llm)
         self._config = conf
         self.setup_graph()
         self.checkpointer = CheckpointerFactory.get_instance()
