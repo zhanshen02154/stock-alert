@@ -43,6 +43,8 @@ def build_task_prompt(task: TaskInfo):
     """
     prompt = f"""
     请完成以下任务: 
+    任务ID: {task.id}
+    Agent标识: {task.agent_type}
     任务描述: {task.description}
     任务目标: {task.target}
     是否要求时效性: {task.timeliness}

@@ -22,14 +22,13 @@ _PASSTHROUGH_KWARGS = (
     "streaming",
 )
 
-# Provider base URLs and API key env vars
 _PROVIDER_CONFIG = {
     "qwen": (
         "https://dashscope.aliyuncs.com/compatible-mode/v1",
         "DASHSCOPE_API_KEY",
     ),
     "deepseek": ("https://api.deepseek.com", "DEEPSEEK_API_KEY"),
-    "openai": ("https://api.ofox.ai/v1", "OPENAI_API_KEY"),
+    "openai": ("https://api.ofox.io/v1", "OPENAI_API_KEY"),
 }
 
 

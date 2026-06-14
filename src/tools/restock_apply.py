@@ -1,5 +1,6 @@
 from langchain_core.tools import tool
 from langgraph.prebuilt import ToolRuntime
+from langgraph.types import interrupt
 from pydantic import BaseModel, Field
 
 from src.core.schemas import Context
@@ -40,7 +41,12 @@ class RestockApplyOutput(BaseModel):
 
 @tool(description="发起单个商品SKU的补货申请")
 def restock_apply(
-    runtime: ToolRuntime[Context], sku_no: str, quantity: int = 1, reason: str = ""
+    runtime: ToolRuntime[Context],
+    sku_no: str,
+    quantity: int = 1,
+    reason: str = "",
+    supplier_id: int = 0,
+    supplier_name: str = "",
 ) -> ToolResult:
     """
     发起单个商品SKU的补货申请
@@ -49,22 +55,38 @@ def restock_apply(
         sku_no: 商品SKU编号必须要SKU开头
         quantity: 补货数量
         reason: 补货原因
+        supplier_id: 供应商ID
+        supplier_name: 供应商名称
     """
     if not sku_no.startswith("SKU"):
         return ToolResult(status="failed", data=None, error="sku_no必须以SKU开头")
 
     url = f"{MICROSERVICE_URL}/inventory/restock"
-    user_id = runtime.context.user_id
     client = HttpClient.get_sync_client()
-    try:
-        with client.post(
-            url=url,
-            timeout=5,
-            data={
-                "sku_id": sku_no,
+    response = interrupt(
+        {
+            "action": "restock_apply",
+            "payload": {
+                "sku_code": sku_no,
                 "quantity": quantity,
                 "reason": reason,
-                "user_id": user_id,
+                "supplier_id": supplier_id,
+                "supplier_name": supplier_name,
+            },
+            "message": f"是否发起针对{sku_no}的补货申请？补货数量:{quantity} 供应商:{supplier_name}",
+        }
+    )
+
+    if response["action"] == "yes":
+        with client.post(
+            url=url,
+            timeout=10,
+            data={
+                "sku_code": sku_no,
+                "quantity": quantity,
+                "reason": reason,
+                "supplier_id": supplier_id,
+                "user_id": runtime.context.user_id,
             },
             headers={"Content-Type": "application/json"},
         ) as resp:
@@ -74,5 +96,5 @@ def restock_apply(
             return ToolResult(
                 status="success", data=RestockApplyOutput(**data), error=None
             )
-    except Exception as e:
-        return ToolResult(status="failed", data=None, error=str(e))
+    else:
+        return ToolResult(status="canceled", data=None, error=None)

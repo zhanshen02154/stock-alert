@@ -1,10 +1,45 @@
 import logging
 import os
+import sys
 from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+try:
+    from langchain.callbacks.base import (
+        BaseCallbackHandler as LangchainBaseCallbackHandler,
+    )
+    from langchain.schema.agent import AgentAction, AgentFinish
+    from langchain.schema.document import Document
+except ImportError:
+    from langchain_core.callbacks.base import (
+        BaseCallbackHandler as LangchainBaseCallbackHandler,
+    )
+    from langchain_core.agents import AgentAction, AgentFinish
+    from langchain_core.documents.base import Document
+
+    import langchain
+    import types
+
+    langchain.callbacks = types.ModuleType("langchain.callbacks")
+    langchain.callbacks.base = types.ModuleType("langchain.callbacks.base")
+    langchain.callbacks.base.BaseCallbackHandler = LangchainBaseCallbackHandler
+    sys.modules["langchain.callbacks"] = langchain.callbacks
+    sys.modules["langchain.callbacks.base"] = langchain.callbacks.base
+
+    langchain.schema = types.ModuleType("langchain.schema")
+    langchain.schema.agent = types.ModuleType("langchain.schema.agent")
+    langchain.schema.document = types.ModuleType("langchain.schema.document")
+    langchain.schema.agent.AgentAction = AgentAction
+    langchain.schema.agent.AgentFinish = AgentFinish
+    langchain.schema.document.Document = Document
+    sys.modules["langchain.schema"] = langchain.schema
+    sys.modules["langchain.schema.agent"] = langchain.schema.agent
+    sys.modules["langchain.schema.document"] = langchain.schema.document
+
+from langfuse.callback.langchain import LangchainCallbackHandler
 
 from config import ConsulConfigLoader
 from config.prompts import load_prompt_from_yaml, load_agent_prompts_from_yaml
@@ -64,7 +99,15 @@ async def lifespan(fastapp: FastAPI):
 
         # 启动LangGraph应用
         fastapp.state.inventory_graph = InventoryManagerGraph(
-            debug=False, config=get_graph_config(), callbacks=[]
+            debug=False,
+            config=get_graph_config(),
+            callbacks=[
+                LangchainCallbackHandler(
+                    public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
+                    secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
+                    host=os.environ.get("LANGFUSE_BASE_URL"),
+                )
+            ],
         )
         fastapp.state.inventory_graph.setup_graph()
 
