@@ -37,7 +37,7 @@ graph TD
     Supervisor -->|任务派发| Worker2[知识库Agent]
     Worker1 -->|结果回传| Supervisor
     Worker2 -->|结果回传| Supervisor
-    Supervisor --> Checkpoint[(Redis Checkpoint)]
+    Supervisor --> Checkpoint[(Redis Checkpoint)] 
     API --> Observe[Langfuse Tracing]
 ```
 
