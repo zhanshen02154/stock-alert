@@ -26,6 +26,8 @@ class QueryInventoryOutput(BaseModel):
         default=0, description="商品状态（1上架 0下架），引用该数据时不展示数值"
     )
     stock_warn: int = Field(default=0, description="商品库存预警值")
+    safe_rate: float = Field(description="安全库存比例(介于0-1之间，参照历史销量)")
+    sales: int = Field(description="历史销量")
 
 
 class QuerySalesVolumeInput(BaseToolInput):

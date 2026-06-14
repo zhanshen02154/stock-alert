@@ -57,6 +57,8 @@ def create_knowledge_search_agent(llm: BaseChatModel):
             data = json.loads(json_str)
             task_result = TaskResult(**data)
 
+        print("knowledge task result:", task_result)
+
         messages.extend(
             create_handoff_back_messages(AgentType.KNOWLEDGES, AgentType.SUPERVISOR)
         )
