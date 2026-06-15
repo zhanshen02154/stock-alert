@@ -77,7 +77,6 @@ class ChatService:
             )
         except Exception as e:
             logger.error(e)
-            print(e)
             final_msg = str(e)
             yield SSEMessage(type="error", content=str(e), message_id=message_id)
         finally:

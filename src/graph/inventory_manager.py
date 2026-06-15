@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import time
@@ -5,10 +6,10 @@ from typing import Any, Optional, List
 
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
-from langfuse.decorators import observe
 
 from config.settings import get_llm_config
 from src.core.llm.factory import create_llm_client
+from src.core.schemas import TaskResult
 from src.graph.setup import GraphSetup, Context
 from src.memory.checkpointer import CheckpointerFactory
 
@@ -37,10 +38,14 @@ class InventoryManagerGraph:
         )
         worker_llm_config = get_llm_config("qwen")
         worker_llm_config["api_key"] = os.environ.get("DASHSCOPE_API_KEY")
-        self._workerllm__client = create_llm_client(
-            provider="qwen",
-            base_url=os.environ.get("DASHSCOPE_API_BASE"),
-            **worker_llm_config,
+        self._worker_client = create_llm_client(
+            model="openai/gpt-5.4",
+            provider="openai",
+            temperature=0.1,
+            max_retries=3,
+            timeout=20,
+            max_tokens=2048,
+            streaming=True,
         )
         self.setup = self.setup_graph()
 
@@ -59,10 +64,10 @@ class InventoryManagerGraph:
         """设置graph"""
         return GraphSetup(
             llm=self.openai_client.get_llm(),
+            worker_llm=self._worker_client.get_llm(),
             conf=self._config,
         )
 
-    @observe(capture_output=False)
     async def astream(self, message: str, thread_id: str, user_id: int):
         """
         异步流式传输
@@ -76,6 +81,7 @@ class InventoryManagerGraph:
             "configurable": {
                 "thread_id": thread_id,
             },
+            "callbacks": self.callbacks,
         }
         current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         user_msg = f"""
@@ -124,7 +130,13 @@ class InventoryManagerGraph:
                                             isinstance(block, dict)
                                             and block.get("type") == "text"
                                         ):
-                                            text_parts.append(block.get("text", ""))
+                                            json_str = block.get("text", "")
+                                            result_str = ""
+                                            if json_str:
+                                                data = json.loads(json_str)
+                                                task_result = TaskResult(**data)
+                                                result_str = task_result.result
+                                            text_parts.append(result_str)
                                     yield {"type": "text", "text": "".join(text_parts)}
                                 else:
                                     yield {"type": "text", "text": content}
@@ -164,13 +176,13 @@ class InventoryManagerGraph:
         """
         sys_prompt = "请为以下对话内容生成不超过30字的标题，只输出标题本身，不要附加任何其他内容。"
         try:
-            resp = await self._workerllm__client.get_llm().ainvoke(
+            resp = await self._worker_client.get_llm().ainvoke(
                 [
                     SystemMessage(content=sys_prompt),
                     HumanMessage(content=message),
                 ]
             )
-            return resp.content
+            return resp.content[0].get("text", "")
         except Exception as e:
             logger.error(f"生成总结标题失败: {e}")
             return "新对话"

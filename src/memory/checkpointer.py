@@ -103,7 +103,4 @@ class CheckpointerFactory:
     async def remove_all_checkpointers(cls, thread_ids: Sequence[str]):
         if not cls.has_checkpointer():
             raise ValueError("checkpointer is null")
-        try:
-            await cls._instance.aprune(thread_ids=thread_ids, strategy="delete")
-        except Exception as e:
-            raise e
+        await cls._instance.aprune(thread_ids=thread_ids, strategy="delete")
