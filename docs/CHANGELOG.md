@@ -1,3 +1,26 @@
+<a name="v3.1.0"></a>
+## [v3.1.0](https://github.com/zhanshen02154/sock-alert/compare/v3.0.0...v3.1.0) (2026-06-14)
+
+### Feat
+
+* 新增 RAG 知识库优化召回率功能
+
+### Fix
+
+* 调整获取库存的返回值，修复 supply_chain 响应中 result 字段提取问题
+
+### Refactor
+
+* 完成多模块迭代优化，统一任务处理流程
+* 增加反思提示词
+* 简化 checkpointer 异常处理
+
+### Docs
+
+* 完善项目文档
+* 修改 README 文件
+* 新增 LICENSE 文件
+
 <a name="v3.0.0"></a>
 ## [v3.0.0](https://github.com/zhanshen02154/sock-alert/compare/v2.1.3...v3.0.0) (2026-05-17)
 
