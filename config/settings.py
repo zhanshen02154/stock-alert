@@ -49,3 +49,22 @@ def get_checkpointer_config(key: str = "checkpointer") -> dict[str, Any]:
 def get_graph_config() -> dict[str, Any]:
     """获取图配置"""
     return GLOBAL_CONFIG.get("graph", {})
+
+
+def get_langfuse_config(key: str = "base") -> dict[str, Any]:
+    return GLOBAL_CONFIG.get("langfuse", {}).get(key, {})
+
+
+def get_prompt_manager_config() -> dict[str, Any]:
+    return GLOBAL_CONFIG.get("prompt_manager", {})
+
+
+def get_app_config(key: str):
+    return GLOBAL_CONFIG.get("app", {}).get(key)
+
+
+def get_app_env() -> str:
+    app_env = get_app_config("environment")
+    if app_env is None:
+        app_env = "dev"
+    return app_env

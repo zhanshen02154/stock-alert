@@ -14,6 +14,7 @@ from src.service.chat import ChatService
 from src.service.session import SessionService
 from src.service.user import UserService
 from src.storage.mysql import get_mysql_session_store
+from src.storage.redis import get_redis_client
 
 
 def get_system_config():
@@ -25,9 +26,9 @@ def get_inventory_config() -> dict[str, Any]:
     return get_agent_config("inventory")
 
 
-# 获取Redis客户端 (从app.state)
+# 获取Redis客户端 (从全局变量)
 def get_redis_client_from_app(request: Request) -> Redis:
-    client = request.app.state.redis_client.get_client()
+    client = get_redis_client().get_client()
     if not client:
         raise RuntimeError("Redis客户端未在应用启动时初始化")
     return client

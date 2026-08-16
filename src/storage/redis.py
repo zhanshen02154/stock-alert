@@ -52,10 +52,8 @@ class RedisClient:
             logger.error(f"关闭Redis失败: {e}")
             raise e
 
-    def get_client(self):
+    def get_client(self) -> Redis | None:
         """获取客户端"""
-        if self.__client is None:
-            self.conn()
         return self.__client
 
     def ping(self):
@@ -69,11 +67,49 @@ class RedisClient:
         """获取值"""
         return await self.__client.get(key)
 
+    async def delete(self, key: str):
+        """
+        删除Key
+        :param key:
+        :return:
+        """
+        return await self.__client.delete(key)
+
+
+# 全局Redis客户端实例
+_redis_client: RedisClient | None = None
+
 
 def create_redis_client() -> RedisClient:
     """创建Redis客户端"""
     conf = get_storage_config("redis")
     return RedisClient(conf)
+
+
+def get_redis_client() -> RedisClient:
+    """获取全局Redis客户端实例"""
+    global _redis_client
+    if _redis_client is None:
+        _redis_client = create_redis_client()
+    return _redis_client
+
+
+async def init_redis_client() -> None:
+    """初始化全局Redis客户端实例（包含连接）"""
+    global _redis_client
+    if _redis_client is None:
+        _redis_client = create_redis_client()
+        await _redis_client.conn()
+        logger.info("全局Redis客户端实例已初始化")
+
+
+async def close_redis_client() -> None:
+    """关闭全局Redis客户端实例"""
+    global _redis_client
+    if _redis_client is not None:
+        await _redis_client.aclose()
+        _redis_client = None
+        logger.info("全局Redis客户端实例已关闭")
 
 
 def create_async_redis_cache() -> AsyncRedisCache:

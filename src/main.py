@@ -1,61 +1,27 @@
 import logging
 import os
-import sys
 from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-try:
-    from langchain.callbacks.base import (
-        BaseCallbackHandler as LangchainBaseCallbackHandler,
-    )
-    from langchain.schema.agent import AgentAction, AgentFinish
-    from langchain.schema.document import Document
-except ImportError:
-    from langchain_core.callbacks.base import (
-        BaseCallbackHandler as LangchainBaseCallbackHandler,
-    )
-    from langchain_core.agents import AgentAction, AgentFinish
-    from langchain_core.documents.base import Document
-
-    import langchain
-    import types
-
-    langchain.callbacks = types.ModuleType("langchain.callbacks")
-    langchain.callbacks.base = types.ModuleType("langchain.callbacks.base")
-    langchain.callbacks.base.BaseCallbackHandler = LangchainBaseCallbackHandler
-    sys.modules["langchain.callbacks"] = langchain.callbacks
-    sys.modules["langchain.callbacks.base"] = langchain.callbacks.base
-
-    langchain.schema = types.ModuleType("langchain.schema")
-    langchain.schema.agent = types.ModuleType("langchain.schema.agent")
-    langchain.schema.document = types.ModuleType("langchain.schema.document")
-    langchain.schema.agent.AgentAction = AgentAction
-    langchain.schema.agent.AgentFinish = AgentFinish
-    langchain.schema.document.Document = Document
-    sys.modules["langchain.schema"] = langchain.schema
-    sys.modules["langchain.schema.agent"] = langchain.schema.agent
-    sys.modules["langchain.schema.document"] = langchain.schema.document
-
-from langfuse.callback.langchain import LangchainCallbackHandler
-
 from config import ConsulConfigLoader
 from config.prompts import load_prompt_from_yaml, load_agent_prompts_from_yaml
-from config.settings import get_graph_config
+from config.settings import get_graph_config, get_app_env
 from src import ToolRegistry
 from src.api.middleware import AuthMiddleware
-from src.api.routers.chat import router
 from src.api.routers.chat import router as chat_router
 from src.api.routers.health import router as health_router
 from src.api.routers.user import routers as user_router
+from src.core.prompt_manager import create_prompt_manager
+from src.core.tracer import flush_langfuse, get_callback_handler, init_langfuse
 from src.graph import InventoryManagerGraph
 from src.knowledge import BaseKnowledgeRetriever
 from src.knowledge.vector_store import load_milvus_manager, close_milvus_manager
 from src.memory.checkpointer import CheckpointerFactory
-from src.storage.mysql import create_mysql_session_store
-from src.storage.redis import create_redis_client
+from src.storage.mysql import init_mysql_session_store, close_mysql_session_store
+from src.storage.redis import init_redis_client, close_redis_client, get_redis_client
 from src.utils.api_client import HttpClient
 
 # 配置日志
@@ -75,39 +41,37 @@ async def lifespan(fastapp: FastAPI):
         consul_port = int(os.getenv("CONSUL_PORT", "8500"))
         config_loader = ConsulConfigLoader(host=consul_host, port=consul_port)
         config_loader.load_config(prefix="agent/stock-alert")
+        app_env = get_app_env()
         logger.info("配置加载完成")
 
         load_prompt_from_yaml(file_path="config/prompts/system.yaml")
         load_agent_prompts_from_yaml()
         logger.info("系统提示词加载完成")
 
-        fastapp.state.mysql_store = create_mysql_session_store()
-        fastapp.state.redis_client = create_redis_client()
-        await fastapp.state.redis_client.conn()
+        init_mysql_session_store()
+        await init_redis_client()
+        fastapp.state.redis_client = get_redis_client()
 
         # 注册所有工具
         ToolRegistry.init_tools()
 
         # 注册检查点
-        await CheckpointerFactory.start(
-            redis_client=fastapp.state.redis_client.get_client()
-        )
+        await CheckpointerFactory.start(redis_client=get_redis_client().get_client())
 
         # 启动milvus
         load_milvus_manager()
         BaseKnowledgeRetriever.load()
 
+        init_langfuse()
+
+        create_prompt_manager()  # 创建提示词管理器
+
         # 启动LangGraph应用
         fastapp.state.inventory_graph = InventoryManagerGraph(
             debug=False,
             config=get_graph_config(),
-            callbacks=[
-                LangchainCallbackHandler(
-                    public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
-                    secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
-                    host=os.environ.get("LANGFUSE_BASE_URL"),
-                )
-            ],
+            callbacks=[get_callback_handler()],
+            environment=app_env,
         )
         fastapp.state.inventory_graph.setup_graph()
 
@@ -116,11 +80,8 @@ async def lifespan(fastapp: FastAPI):
         yield
     finally:
         logger.info("应用关闭中")
-        if hasattr(fastapp.state, "mysql_store"):
-            fastapp.state.mysql_store.close()
-
-        if hasattr(fastapp.state, "redis_client"):
-            await fastapp.state.redis_client.aclose()
+        close_mysql_session_store()
+        await close_redis_client()
 
         await HttpClient.close_all()
 
@@ -136,6 +97,8 @@ async def lifespan(fastapp: FastAPI):
 
         if hasattr(fastapp.state, "inventory_graph"):
             await fastapp.state.inventory_graph.aclose()
+
+        flush_langfuse()
 
         logger.info("应用已关闭")
 
@@ -154,7 +117,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(router=router)
 app.include_router(router=health_router)
 app.include_router(router=user_router)
 app.include_router(router=chat_router)

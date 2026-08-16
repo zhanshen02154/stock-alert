@@ -2,7 +2,7 @@ import json
 import logging
 from fastapi import status
 from starlette.types import ASGIApp, Receive, Scope, Send
-from src.storage import RedisClient
+from src.storage.redis import get_redis_client
 from src.utils.jwt import JWTUtil
 
 logger = logging.getLogger(__name__)
@@ -87,14 +87,13 @@ class AuthMiddleware:
             await self._send_unauthorized(send, "无效的token")
             return
 
-        # 从 app.state 获取 redis_client
-        app_state = scope.get("app")
-        if app_state and hasattr(app_state, "state"):
-            redis_client: RedisClient = getattr(app_state.state, "redis_client", None)
-        else:
+        # 从全局变量获取 redis_client
+        try:
+            redis_client = get_redis_client()
+        except Exception:
             redis_client = None
 
-        if not redis_client:
+        if not redis_client or not redis_client.get_client():
             logger.error("无法获取 Redis 客户端")
             await self._send_unauthorized(send, "认证服务异常")
             return

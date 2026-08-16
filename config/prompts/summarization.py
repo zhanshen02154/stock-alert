@@ -1,32 +1,3 @@
-from langchain_core.prompts import ChatPromptTemplate
-
-INITIAL_SUMMARY_PROMPT = ChatPromptTemplate.from_messages(
-    [
-        ("placeholder", "{messages}"),
-        ("user", "请对上述对话进行总结:"),
-    ]
-)
-
-EXISTING_SUMMARY_PROMPT = ChatPromptTemplate.from_messages(
-    [
-        ("placeholder", "{messages}"),
-        (
-            "user",
-            "这是迄今为止对话的总结: {existing_summary}\n\n"
-            "通过考虑上述新消息来扩展此摘要:",
-        ),
-    ]
-)
-
-FINAL_SUMMARY_PROMPT = ChatPromptTemplate.from_messages(
-    [
-        # if exists
-        ("placeholder", "{system_message}"),
-        ("system", "到目前为止的对话总结: {summary}"),
-        ("placeholder", "{messages}"),
-    ]
-)
-
 DEFAULT_SUUMARIZATION_PROMPT = """
 <role> 上下文提取助手 </role>
 <primary_objective>
@@ -36,6 +7,7 @@ DEFAULT_SUUMARIZATION_PROMPT = """
 <objective_information>
 你即将达到可接受的输入令牌总数上限，因此必须从对话历史中提取最高质量/最相关的信息片段。
 该上下文随后将覆盖下方呈现的对话历史。因此，请确保你提取的上下文仅包含对继续推进总体目标最重要的信息。
+在总结时，务必保留所有关键数据点和结构化信息的引用。
 </objective_information>
 
 <instructions> 下方的对话历史将被你在本步骤中提取的上下文所替换。 你希望确保不会重复任何已完成的操作，因此从对话历史中提取的上下文应聚焦于对实现总体目标最重要的信息。

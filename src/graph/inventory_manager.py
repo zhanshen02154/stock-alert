@@ -9,6 +9,7 @@ from langchain_core.runnables import RunnableConfig
 
 from config.settings import get_llm_config
 from src.core.llm.factory import create_llm_client
+from src.core.prompt_manager import get_prompt_manager
 from src.core.schemas import TaskResult
 from src.graph.setup import GraphSetup, Context
 from src.memory.checkpointer import CheckpointerFactory
@@ -26,10 +27,12 @@ class InventoryManagerGraph:
         debug=False,
         config: dict[str, Any] = None,
         callbacks: Optional[List] = None,
+        environment: str = "dev",
     ):
         self._debug = debug
         self._config = config
         self.callbacks = callbacks or []
+        self.__environment = environment
         llm_kwargs = self._get_provider_kwargs(self._config["llm_provider"])
         self.openai_client = create_llm_client(
             model=llm_kwargs["model"],
@@ -84,11 +87,14 @@ class InventoryManagerGraph:
             "callbacks": self.callbacks,
         }
         current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        user_msg = f"""
-请根据用户输入的内容完成回答
-当前日期: {current_time}
-用户输入: {message}
-"""
+        user_msg = (
+            get_prompt_manager()
+            .get_prompt_by_environment("user_input")
+            .compile(
+                current_time=current_time,
+                message=message,
+            )
+        )
         input_data = {
             "messages": ("user", user_msg),
             "user_input": message,
@@ -174,11 +180,13 @@ class InventoryManagerGraph:
         :param message: 对话内容
         :return: 标题
         """
-        sys_prompt = "请为以下对话内容生成不超过30字的标题，只输出标题本身，不要附加任何其他内容。"
+        sys_prompt = get_prompt_manager().get_prompt_by_environment(
+            name="title_extraction", label=self.__environment, prompt_type="text"
+        )
         try:
             resp = await self._worker_client.get_llm().ainvoke(
                 [
-                    SystemMessage(content=sys_prompt),
+                    SystemMessage(content=sys_prompt.prompt),
                     HumanMessage(content=message),
                 ]
             )

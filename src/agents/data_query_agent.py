@@ -7,25 +7,30 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import SystemMessage, ToolMessage, HumanMessage
 from langgraph.types import Command
 
-from config.prompts.agents import get_agent_prompt
 from src.agents.base import create_handoff_back_messages, build_task_prompt
 from src.core.agent_state import AgentState
+from src.core.prompt_manager import get_prompt_manager
 from src.core.schemas import AgentType, TaskInfo, TaskResult
 from src.tools.registry import ToolRegistry
 
 
-def create_supply_chain_agent(llm: BaseChatModel):
+def create_supply_chain_agent(llm: BaseChatModel, app_env: str = "dev"):
     """
     创建数据查询Agent
+    :param app_env:
     :param llm: 基础语言模型
     :return: 数据查询节点函数
     """
     tools = ToolRegistry.get_tools_by_group("tools_supply_chain")
+    system_prompt = get_prompt_manager().get_prompt_by_environment(
+        name="supply_chain_agent", label=app_env, prompt_type="text"
+    )
+    system_message = system_prompt.get_langchain_prompt()
     agent = create_agent(
         model=llm,
         tools=tools,
         system_prompt=SystemMessage(
-            content=get_agent_prompt("data_query_agent", "system_message")
+            content=system_message,
         ),
         middleware=[
             ToolRetryMiddleware(

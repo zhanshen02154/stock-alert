@@ -51,11 +51,10 @@ class TaskResult(BaseModel):
         AgentType.SUPPLY_CHAIN,
     ] = Field(description="助手标识")
     confidence: float = Field(description="回答置信度，0到1之间")
-    status: Literal[TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.BLOCKED] = (
-        Field(
-            description="状态: completed=执行成功 failed=执行失败 blocked=执行异常"
-        )
+    status: Literal[TaskStatus.COMPLETED, TaskStatus.FAILED] = Field(
+        description="状态: completed=执行成功 failed=执行失败"
     )
+    max_retries: int = Field(description="剩余重试次数（默认3）", default=3)
     needs: List[str] = Field(default=[], description="缺少的数据")
     timestamp: int = Field(description="时间戳（单位秒,UTC+8）")
 

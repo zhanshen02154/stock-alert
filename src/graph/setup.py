@@ -28,14 +28,23 @@ class GraphSetup:
     """
 
     def __init__(
-        self, llm: BaseChatModel, worker_llm: BaseChatModel, conf: dict[str, Any]
+        self,
+        llm: BaseChatModel,
+        worker_llm: BaseChatModel,
+        conf: dict[str, Any],
+        environment: str = "dev",
     ):
         self.llm = llm
         self.graph = StateGraph(AgentState, context_schema=Context)
-        self.supervisor_agent = create_supervisor_agent(llm=llm)
+        self._environment = environment
+        self.supervisor_agent = create_supervisor_agent(llm=llm, env=environment)
         self._worker_llm = worker_llm
-        self._supply_chain_agent = create_supply_chain_agent(llm=worker_llm)
-        self._knowledge_agent = create_knowledge_search_agent(llm=worker_llm)
+        self._supply_chain_agent = create_supply_chain_agent(
+            llm=worker_llm, app_env=environment
+        )
+        self._knowledge_agent = create_knowledge_search_agent(
+            llm=worker_llm, env=environment
+        )
         self._config = conf
         self.setup_graph()
         self.checkpointer = CheckpointerFactory.get_instance()

@@ -2,6 +2,8 @@ import uuid
 
 from langchain_core.messages import ToolMessage, AIMessage, ToolCall
 
+from config.settings import get_app_env
+from src.core.prompt_manager import get_prompt_manager
 from src.core.schemas import TaskInfo
 
 _METADATA_KEY_IS_HANDOFF_BACK = "__is_handoff_back"
@@ -41,13 +43,17 @@ def build_task_prompt(task: TaskInfo):
     :param task: 任务信息
     :return:
     """
-    prompt = f"""
-    请完成以下任务: 
-    任务ID: {task.id}
-    Agent标识: {task.agent_type}
-    任务描述: {task.description}
-    任务目标: {task.target}
-    是否要求时效性: {task.timeliness}
-    """
+    app_env = get_app_env()
+    prompt = (
+        get_prompt_manager()
+        .get_prompt_by_environment(name="task_info", label=app_env)
+        .compile(
+            id=task.id,
+            agent_type=task.agent_type,
+            description=task.description,
+            target=task.target,
+            timeliness=task.timeliness,
+        )
+    )
 
     return prompt

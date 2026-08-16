@@ -7,28 +7,32 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import SystemMessage, ToolMessage, HumanMessage
 from langgraph.types import Command
 
-from config.prompts.system import get_system_prompt
 from src import ToolRegistry
 from src.agents.base import create_handoff_back_messages, build_task_prompt
 from src.core.agent_state import AgentState
+from src.core.prompt_manager import get_prompt_manager
 from src.core.schemas import AgentType, TaskInfo, TaskResult
 
 logger = logging.getLogger(__name__)
 
 
-def create_knowledge_search_agent(llm: BaseChatModel):
+def create_knowledge_search_agent(llm: BaseChatModel, env: str = "dev"):
     """
     创建知识库检索Agent
+    :param env: 环境
     :param llm: 大模型
     :return:
     """
     tools = ToolRegistry.get_tools_by_group("tools_knowledges")
+    system_prompt = get_prompt_manager().get_prompt_by_environment(
+        name="knowledges/system", label=env
+    )
     knowledge_search_agent = create_agent(
         model=llm,
         name=AgentType.KNOWLEDGES,
         state_schema=AgentState,
         response_format=TaskResult,
-        system_prompt=SystemMessage(content=get_system_prompt("rag_system")),
+        system_prompt=SystemMessage(content=system_prompt.prompt),
         tools=tools,
     )
 
