@@ -89,7 +89,7 @@ class InventoryManagerGraph:
         current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         user_msg = (
             get_prompt_manager()
-            .get_prompt_by_environment("user_input")
+            .get_prompt_by_environment(name="user_input", label=self.__environment)
             .compile(
                 current_time=current_time,
                 message=message,

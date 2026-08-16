@@ -71,7 +71,7 @@ def create_supervisor_agent(llm: BaseChatModel, env: str = "dev"):
         if last_task_result is not None and len(last_task_result.needs) > 0:
             prompt = (
                 get_prompt_manager()
-                .get_prompt_by_environment("supervisor/need_others")
+                .get_prompt_by_environment("supervisor/need_others", label=env)
                 .compile(
                     timestamp=last_task_result.timestamp,
                     user_input=state.get("user_input"),
