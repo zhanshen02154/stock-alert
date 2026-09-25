@@ -1,0 +1,45 @@
+name: 同步指定文件到其他仓库
+
+on:
+  push:
+    paths:
+      - 'README.md'
+      - 'docs/CHANGELOG.md'
+    branches:
+      - master
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: pull stock-alert
+        uses: actions/checkout@v4
+        with:
+          path: stock-alert 
+
+      - name: pull supply-chain-agents
+        uses: actions/checkout@v4
+        with:
+          repository: zhanshen02154/supply-chain-agents
+          token: ${{ secrets.SYNC_TOKEN }}
+          path: supply-chain-agents
+
+      - name: 复制文件并推送
+        run: |
+          cp -f stock-alert/README.md supply-chain-agents/README.md
+          cp -f stock-alert/docs/CHANGELOG.md supply-chain-agents/docs/CHANGELOG.md
+
+          cd supply-chain-agents
+          
+          # 配置提交身份
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # 如果有变更才提交推送
+          if [[ -n $(git status -s) ]]; then
+            git add README.md docs/CHANGELOG.md
+            git commit -m "同步 README.md 和 CHANGELOG.md 来自stock-alert"
+            git push
+          else
+            echo "没有文件变动，跳过推送。"
+          fi

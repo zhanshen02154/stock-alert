@@ -11,7 +11,7 @@ tests/
 .codebuddy/
 .claude/
 .trae/
-
+.github/
 
 
 # 排除文档
