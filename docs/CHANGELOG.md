@@ -1,4 +1,12 @@
 
+<a name="v3.1.1"></a>
+## [v3.1.1](https://github.com/zhanshen02154/sock-alert/compare/v3.1.0...v3.1.1) (2026-09-25)
+
+### Refactor
+
+* **env:** 环境变量迁移到.env文件
+
+
 <a name="v3.1.0"></a>
 ## [v3.1.0](https://github.com/zhanshen02154/sock-alert/compare/v3.0.0...v3.1.0) (2026-06-15)
 

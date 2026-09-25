@@ -138,11 +138,3 @@ graph TD
 1. 复制配置：`cp docker-compose-dev.yml docker-compose.yml`，填写必要的环境变量，详情见配置项。
 2. 构建镜像：`docker build -t stock-alert:local .`
 3. 启动服务：`docker-compose up -d`
-
-## 关键配置项（详见 docker-compose-dev.yml）
-| 配置项            | 说明                     |
-| ----------------- | ------------------------ |
-| CONSUL_HOST       | Consul 服务地址          |
-| MICROSERVICE_URL  | 后端微服务地址           |
-| DASHSCOPE_API_KEY | 阿里云 DashScope API Key |
-| JWT_SECRET_KEY    | JWT 密钥                 |

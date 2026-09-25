@@ -2,10 +2,14 @@ import logging
 import os
 import sys
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import uvicorn
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+load_dotenv(dotenv_path=Path(__file__).parent / ".env")
 
 try:
     from langchain.callbacks.base import (
@@ -63,6 +67,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
+
 logger = logging.getLogger(__name__)
 
 
