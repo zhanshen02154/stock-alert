@@ -18,3 +18,4 @@ sql/
 cli/
 
 docker-compose.yml
+.env

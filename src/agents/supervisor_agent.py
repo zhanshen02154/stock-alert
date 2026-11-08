@@ -48,7 +48,6 @@ def create_supervisor_agent(llm: BaseChatModel):
     ) -> Command[
         Literal[
             AgentType.SUPPLY_CHAIN,
-            AgentType.KNOWLEDGES,
             END,
         ]
     ]:

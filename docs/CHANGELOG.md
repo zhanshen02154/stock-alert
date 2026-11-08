@@ -1,4 +1,21 @@
 
+<a name="v3.1.2"></a>
+## [v3.1.2](https://github.com/zhanshen02154/sock-alert/compare/v3.1.1...v3.1.2) (2026-11-08)
+
+### Feat
+
+* **langfuse-callback:** 新增Langfuse的CallbackHandler
+* **llm-client:** 新增profile参数 ([#65](https://github.com/zhanshen02154/sock-alert/issues/65))
+* **feat(agent)!:** 多智能体合并为单智能体并接入 Langfuse 提示词管理 ([#65](https://github.com/zhanshen02154/sock-alert/issues/65))
+本次迭代为破坏性变更：
+- 新增 InventoryAgent 单智能体，替代 supervisor/knowledge_search 多智能体编排
+- 提示词改由 Langfuse PromptManager 按环境标签加载，新增系统提示词时间注入中间件
+- 知识库检索返回结构化片段，新增 references 引用输出与 SSE result 事件
+- 新增 Milvus 集合注册与按 schema 自动建表
+
+BREAKING CHANGE: 移除 InventoryManagerGraph 多智能体图，ChatService/SessionService 依赖改为 InventoryAgent，app.state.inventory_graph 由 app.state.inventory_agent 取代。
+
+
 <a name="v3.1.1"></a>
 ## [v3.1.1](https://github.com/zhanshen02154/sock-alert/compare/v3.1.0...v3.1.1) (2026-09-25)
 

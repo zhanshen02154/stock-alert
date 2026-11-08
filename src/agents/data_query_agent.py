@@ -1,13 +1,12 @@
 import json
 from typing import Literal
 
+from config.prompts.agents import get_agent_prompt
 from langchain.agents import create_agent
 from langchain.agents.middleware import ToolRetryMiddleware
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import SystemMessage, ToolMessage, HumanMessage
 from langgraph.types import Command
-
-from config.prompts.agents import get_agent_prompt
 from src.agents.base import create_handoff_back_messages, build_task_prompt
 from src.core.agent_state import AgentState
 from src.core.schemas import AgentType, TaskInfo, TaskResult
