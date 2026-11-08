@@ -1,6 +1,5 @@
 import logging
 import os
-import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -8,53 +7,21 @@ import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from src.core.langfuse import get_langfuse_client, init_langfuse
+from src.core.prompts import load_prompt_manager
 
 load_dotenv(dotenv_path=Path(__file__).parent / ".env")
 
-try:
-    from langchain.callbacks.base import (
-        BaseCallbackHandler as LangchainBaseCallbackHandler,
-    )
-    from langchain.schema.agent import AgentAction, AgentFinish
-    from langchain.schema.document import Document
-except ImportError:
-    from langchain_core.callbacks.base import (
-        BaseCallbackHandler as LangchainBaseCallbackHandler,
-    )
-    from langchain_core.agents import AgentAction, AgentFinish
-    from langchain_core.documents.base import Document
-
-    import langchain
-    import types
-
-    langchain.callbacks = types.ModuleType("langchain.callbacks")
-    langchain.callbacks.base = types.ModuleType("langchain.callbacks.base")
-    langchain.callbacks.base.BaseCallbackHandler = LangchainBaseCallbackHandler
-    sys.modules["langchain.callbacks"] = langchain.callbacks
-    sys.modules["langchain.callbacks.base"] = langchain.callbacks.base
-
-    langchain.schema = types.ModuleType("langchain.schema")
-    langchain.schema.agent = types.ModuleType("langchain.schema.agent")
-    langchain.schema.document = types.ModuleType("langchain.schema.document")
-    langchain.schema.agent.AgentAction = AgentAction
-    langchain.schema.agent.AgentFinish = AgentFinish
-    langchain.schema.document.Document = Document
-    sys.modules["langchain.schema"] = langchain.schema
-    sys.modules["langchain.schema.agent"] = langchain.schema.agent
-    sys.modules["langchain.schema.document"] = langchain.schema.document
-
-from langfuse.callback.langchain import LangchainCallbackHandler
-
 from config import ConsulConfigLoader
 from config.prompts import load_prompt_from_yaml, load_agent_prompts_from_yaml
-from config.settings import get_graph_config
+from config.settings import get_agent_config
 from src import ToolRegistry
+from src.agents.inventory import InventoryAgent
 from src.api.middleware import AuthMiddleware
 from src.api.routers.chat import router
 from src.api.routers.chat import router as chat_router
 from src.api.routers.health import router as health_router
 from src.api.routers.user import routers as user_router
-from src.graph import InventoryManagerGraph
 from src.knowledge import BaseKnowledgeRetriever
 from src.knowledge.vector_store import load_milvus_manager, close_milvus_manager
 from src.memory.checkpointer import CheckpointerFactory
@@ -82,6 +49,10 @@ async def lifespan(fastapp: FastAPI):
         config_loader.load_config(prefix="agent/stock-alert")
         logger.info("配置加载完成")
 
+        # 加载Langfuse和提示词管理器
+        init_langfuse()
+        load_prompt_manager()
+
         load_prompt_from_yaml(file_path="config/prompts/system.yaml")
         load_agent_prompts_from_yaml()
         logger.info("系统提示词加载完成")
@@ -102,19 +73,10 @@ async def lifespan(fastapp: FastAPI):
         load_milvus_manager()
         BaseKnowledgeRetriever.load()
 
-        # 启动LangGraph应用
-        fastapp.state.inventory_graph = InventoryManagerGraph(
-            debug=False,
-            config=get_graph_config(),
-            callbacks=[
-                LangchainCallbackHandler(
-                    public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
-                    secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
-                    host=os.environ.get("LANGFUSE_BASE_URL"),
-                )
-            ],
+        # 启动智能体
+        fastapp.state.inventory_agent = InventoryAgent(
+            conf=get_agent_config("inventory")
         )
-        fastapp.state.inventory_graph.setup_graph()
 
         logger.info("应用程序已经启动")
 
@@ -131,6 +93,7 @@ async def lifespan(fastapp: FastAPI):
 
         await close_milvus_manager()
         BaseKnowledgeRetriever.close()
+        logger.info("RAG服务已关闭")
 
         # 关闭工具
         ToolRegistry.cleanup()
@@ -139,8 +102,13 @@ async def lifespan(fastapp: FastAPI):
             fastapp.state.kafka_consumer.stop()
             fastapp.state.kafka_consumer.close()
 
-        if hasattr(fastapp.state, "inventory_graph"):
-            await fastapp.state.inventory_graph.aclose()
+        if hasattr(fastapp.state, "inventory_agent"):
+            await fastapp.state.inventory_agent.aclose()
+            logger.info("智能体已关闭")
+
+        get_langfuse_client().shutdown()
+        logger.info("智能体已关闭")
+
 
         logger.info("应用已关闭")
 

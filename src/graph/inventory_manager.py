@@ -11,6 +11,7 @@ from config.settings import get_llm_config
 from src.core.llm.factory import create_llm_client
 from src.core.schemas import TaskResult
 from src.graph.setup import GraphSetup, Context
+from src.knowledge.references import build_references
 from src.memory.checkpointer import CheckpointerFactory
 
 logger = logging.getLogger(__name__)
@@ -93,6 +94,7 @@ class InventoryManagerGraph:
             "messages": ("user", user_msg),
             "user_input": message,
         }
+        raw_chunks: list[dict[str, Any]] = []
         async for chunk in self.setup.workflow.astream(
             input_data,
             config=config,
@@ -103,6 +105,10 @@ class InventoryManagerGraph:
                 for node_name, node_data in chunk.items():
                     if isinstance(node_data, dict) and "messages" in node_data:
                         messages = node_data["messages"]
+                        for message in messages:
+                            artifact = getattr(message, "artifact", None)
+                            if isinstance(artifact, dict):
+                                raw_chunks.extend(artifact.get("chunks", []))
                         if messages and hasattr(messages[-1], "content"):
                             content = messages[-1].content
                             if content:
@@ -140,6 +146,12 @@ class InventoryManagerGraph:
                                     yield {"type": "text", "text": "".join(text_parts)}
                                 else:
                                     yield {"type": "text", "text": content}
+
+        references = build_references(raw_chunks)
+        yield {
+            "type": "references",
+            "items": [reference.model_dump() for reference in references],
+        }
 
     async def aclose(self):
         """

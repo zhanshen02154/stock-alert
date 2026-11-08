@@ -1,10 +1,9 @@
 import logging
 from typing import Any, Optional, List
 
-from pymilvus import connections, MilvusClient, AnnSearchRequest
-from pymilvus.milvus_client import IndexParams
-
 from config.settings import get_storage_config
+from pymilvus import connections, MilvusClient, AnnSearchRequest, CollectionSchema
+from pymilvus.milvus_client import IndexParams
 from src.knowledge.embedding import get_qwen_emeddings
 
 logger = logging.getLogger(__name__)
@@ -36,6 +35,26 @@ class MilvusManager:
             db_name=self.__connection_args["db_name"],
         )
         self.__client.load_collection(collection_name="smart_procurement_rules")
+
+    def create_collection(self, name: str, schema: CollectionSchema, index_params: list):
+        """
+        创建集合
+        """
+        exists = self.__client.has_collection(collection_name=name)
+        if exists:
+            return True
+
+        index_params_cls = IndexParams()
+        for item in index_params:
+            item_field_name = item.get("field_name")
+            item_index_params = item.get("index_params", {})
+            item_metric_type = item.get("metric_type")
+            item_index_type = item.get("index_type")
+            index_params_cls.add_index(field_name=item_field_name, index_type=item_index_type, metric_type=item_metric_type, **item_index_params)
+        self.__client.create_collection(collection_name=name, schema=schema, index_params=index_params_cls)
+        return True
+
+
 
     def create_index(
         self,
@@ -96,6 +115,13 @@ class MilvusManager:
             logger.error(f"混合搜索失败: {e}", exc_info=e)
             return []
 
+
+    def get_client_instance(self):
+        """
+        获取客户端实例
+        """
+        return self.__client
+
     def close(self):
         """关闭所有缓存的 Milvus 实例"""
         self.__client.close()
@@ -145,3 +171,9 @@ def get_milvus_manager():
     if milvus_manager is None:
         return None
     return milvus_manager
+
+def get_milvus_client() -> MilvusClient| None:
+    """
+    获取Milvus客户端实例
+    """
+    return get_milvus_manager().get_client_instance()

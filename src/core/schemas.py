@@ -1,13 +1,14 @@
 from dataclasses import dataclass
+from enum import Enum
 from typing import Literal, List
 
 from pydantic import BaseModel, Field
 
 
-class AgentType:
+class AgentType(str, Enum):
     SUPERVISOR = "supervisor"
-    KNOWLEDGES = "knowledges"
     SUPPLY_CHAIN = "supply_chain"
+    INVENTORY = "inventory"
 
 
 class TaskStatus:
@@ -30,7 +31,6 @@ class TaskInfo(BaseModel):
     target: str = Field(description="任务目标")
     agent_type: Literal[
         "FINISH",
-        AgentType.KNOWLEDGES,
         AgentType.SUPPLY_CHAIN,
     ] = Field(description="助手标识")
     timeliness: bool = Field(
@@ -47,7 +47,6 @@ class TaskResult(BaseModel):
     id: str = Field(description="任务ID")
     result: str = Field(description="结果")
     agent_type: Literal[
-        AgentType.KNOWLEDGES,
         AgentType.SUPPLY_CHAIN,
     ] = Field(description="助手标识")
     confidence: float = Field(description="回答置信度，0到1之间")
@@ -69,13 +68,35 @@ class Router(BaseModel):
     confidence: float = Field(description="对路由决策的置信度，0到1之间")
     next: Literal[
         "FINISH",
-        AgentType.KNOWLEDGES,
         AgentType.SUPPLY_CHAIN,
     ] = Field(description="下一步路由目标")
     next_task: TaskInfo | None = Field(
         description="下一步路由的任务信息（已获得最终答案则为None）", default=None
     )
 
+class KBReferenceItem(BaseModel):
+    """
+    参考资料来源
+    """
+    source: str = Field(description="文件名", min_length=1, max_length=60)
+    version: str = Field(description="版本", min_length=1, max_length=200)
+    context: str = Field(description="上下文（300字内）", min_length=1, max_length=300)
+
+class InventoryResult(BaseModel):
+    """
+    库存智能助手最终输出结果
+    """
+    summary: str = Field(description="结论")
+    reasoning: str = Field(description="决策理由", min_length=1, max_length=200)
+    confidence: float = Field(description="决策置信度", ge=0, le=1)
+    references: list[KBReferenceItem] = Field(description="参考的知识库来源（用到知识库时必传）", min_length=0)
+    timestamp: int = Field(description="时间戳（单位: s）")
+
+class SessionTitle(BaseModel):
+    """
+    标题结果
+    """
+    title: str = Field(description="标题", min_length=1, max_length=50)
 
 @dataclass
 class Context:
