@@ -4,7 +4,6 @@ from typing import Optional
 from langchain_core.language_models import BaseChatModel
 from langchain_openai import ChatOpenAI
 from langchain_qwq import ChatQwen, ChatQwQ
-
 from src.core.llm.base_client import BaseLLMClient
 from src.core.llm.validators import validate_model
 
@@ -20,6 +19,7 @@ _PASSTHROUGH_KWARGS = (
     "temperature",
     "max_tokens",
     "streaming",
+    "profile"
 )
 
 _PROVIDER_CONFIG = {
@@ -75,7 +75,7 @@ class OpenAIClient(BaseLLMClient):
             return ChatQwen(**llm_kwargs)
         elif llm_kwargs["model"] == "qwq-plus":
             return ChatQwQ(**llm_kwargs)
-
+        
         return ChatOpenAI(**llm_kwargs)
 
     def validate_model(self) -> bool:
