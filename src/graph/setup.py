@@ -10,7 +10,6 @@ from langgraph.types import RetryPolicy
 from src.agents.data_query_agent import (
     create_supply_chain_agent,
 )
-from src.agents.knowledge_search_agent import create_knowledge_search_agent
 from src.agents.supervisor_agent import (
     create_supervisor_agent,
 )
@@ -35,7 +34,6 @@ class GraphSetup:
         self.supervisor_agent = create_supervisor_agent(llm=llm)
         self._worker_llm = worker_llm
         self._supply_chain_agent = create_supply_chain_agent(llm=worker_llm)
-        self._knowledge_agent = create_knowledge_search_agent(llm=worker_llm)
         self._config = conf
         self.setup_graph()
         self.checkpointer = CheckpointerFactory.get_instance()
@@ -49,10 +47,6 @@ class GraphSetup:
     def setup_graph(self):
         retry_conf = self._config.get("retry_policy", {})
         self.graph.add_node(AgentType.SUPERVISOR, self.supervisor_agent)
-        self.graph.add_node(
-            AgentType.KNOWLEDGES,
-            self._knowledge_agent,
-        )
         self.graph.add_node(
             node=AgentType.SUPPLY_CHAIN,
             action=self._supply_chain_agent,

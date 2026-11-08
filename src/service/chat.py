@@ -1,9 +1,9 @@
 import logging
 import uuid
 from collections.abc import AsyncGenerator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
-from src.graph.inventory_manager import InventoryManagerGraph
+from src.agents.inventory import InventoryAgent
 from src.repository.session import SessionRepository
 from src.utils.plain_text import sanitize_text
 
@@ -16,12 +16,14 @@ class SSEMessage:
     content: str = ""
     message_id: str = ""
     full_content: str = ""
+    references: list[dict] = field(default_factory=list)
+    result: dict | None = None
 
 
 class ChatService:
     def __init__(
         self,
-        agent: InventoryManagerGraph,
+        agent: InventoryAgent,
         session_repo: SessionRepository,
     ):
         self.__agent = agent
@@ -54,6 +56,8 @@ class ChatService:
                 session_id=session_id
             )
             full_content = []
+            references: list[dict] = []
+            result: dict | None = None
             user_message = sanitize_text(text=msg_info["content"])
 
             async for chunk in self.__agent.astream(
@@ -67,13 +71,31 @@ class ChatService:
                         full_content="".join(full_content),
                         message_id=message_id,
                     )
+                elif chunk.get("type") == "references":
+                    references = chunk.get("items", [])
+                    yield SSEMessage(
+                        type="references",
+                        references=references,
+                        message_id=message_id,
+                    )
+                elif chunk.get("type") == "result":
+                    result = chunk.get("data")
+                    yield SSEMessage(
+                        type="result",
+                        result=result,
+                        message_id=message_id,
+                    )
 
             final_msg = "".join(full_content)
+            if not final_msg and result:
+                final_msg = str(result.get("summary", ""))
             yield SSEMessage(
                 type="done",
                 content=final_msg,
                 full_content=final_msg,
                 message_id=message_id,
+                references=references,
+                result=result,
             )
         except Exception as e:
             logger.error(e)

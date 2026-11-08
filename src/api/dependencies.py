@@ -6,7 +6,7 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from redis.asyncio import Redis
 
 from config.settings import GLOBAL_CONFIG, get_agent_config
-from src.graph.inventory_manager import InventoryManagerGraph
+from src.agents.inventory import InventoryAgent
 from src.knowledge.vector_store import MilvusManager
 from src.repository.session import SessionRepository
 from src.repository.user import UserRepository
@@ -55,11 +55,11 @@ def get_checkpointer(request: Request) -> BaseCheckpointSaver:
     return request.app.state.checkpointer
 
 
-def get_inventory_graph(request: Request) -> InventoryManagerGraph:
-    """获取库存图 (从app.state)"""
-    if not hasattr(request.app.state, "inventory_graph"):
-        raise RuntimeError("InventoryManagerGraph未在应用启动时初始化")
-    return request.app.state.inventory_graph
+def get_inventory_agent(request: Request) -> InventoryAgent:
+    """获取库存智能助手 (从app.state)"""
+    if not hasattr(request.app.state, "inventory_agent"):
+        raise RuntimeError("InventoryAgent未在应用启动时初始化")
+    return request.app.state.inventory_agent
 
 
 @lru_cache(maxsize=1)
@@ -78,7 +78,7 @@ def get_user_service(
 @lru_cache(maxsize=1)
 def get_session_service(
     session_repo: SessionRepository = Depends(get_session_repo),
-    agent: InventoryManagerGraph = Depends(get_inventory_graph),
+    agent: InventoryAgent = Depends(get_inventory_agent),
 ) -> SessionService:
     return SessionService(session_repo=session_repo, agent=agent)
 
@@ -91,7 +91,7 @@ def get_milvus_manager(req: Request) -> MilvusManager:
 @lru_cache(maxsize=1)
 def get_chat_service(
     session_repo: SessionRepository = Depends(get_session_repo),
-    agent: InventoryManagerGraph = Depends(get_inventory_graph),
+    agent: InventoryAgent = Depends(get_inventory_agent),
 ) -> ChatService:
     """获取聊天服务"""
     return ChatService(session_repo=session_repo, agent=agent)

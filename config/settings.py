@@ -49,3 +49,9 @@ def get_checkpointer_config(key: str = "checkpointer") -> dict[str, Any]:
 def get_graph_config() -> dict[str, Any]:
     """获取图配置"""
     return GLOBAL_CONFIG.get("graph", {})
+
+def get_prompt_manager_config() -> dict[str, Any]:
+    """
+    获取提示词管理器配置
+    """
+    return GLOBAL_CONFIG.get("prompt_manager", {})

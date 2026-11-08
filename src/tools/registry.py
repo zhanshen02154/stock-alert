@@ -35,8 +35,8 @@ class ToolRegistry:
                     query_daily_sales_volume,
                     query_suppliers,
                     restock_apply,
+                    search_smart_procurement_rules,
                 ],
-                "tools_knowledges": [search_smart_procurement_rules],
             }
 
     @classmethod
